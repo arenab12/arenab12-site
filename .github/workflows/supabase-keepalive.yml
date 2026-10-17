@@ -1,18 +1,40 @@
+# Mantém o projeto Supabase "Arena B12 - Site" ativo no plano gratuito.
+# Faz login com um usuário dedicado (credenciais nos segredos do repositório)
+# e lê alguns lançamentos, como o dashboard faz — uma consulta anônima não contava como atividade.
 name: Supabase keep-alive
 
 on:
   schedule:
-    - cron: "0 12 */3 * *"
-  workflow_dispatch:
+    - cron: "23 11 * * *"   # todo dia, 08:23 de Brasília
+  workflow_dispatch:          # permite rodar manualmente pela aba Actions
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    env:
+      SB_URL: https://zryazxwxrufzeyaoeqbm.supabase.co
+      SB_KEY: sb_publishable_Hux6NxPxXSMnb1gW5gDXzA_j5ja3bhN
+      PING_EMAIL: ${{ secrets.SUPABASE_PING_EMAIL }}
+      PING_PASSWORD: ${{ secrets.SUPABASE_PING_PASSWORD }}
     steps:
-      - name: Consulta leve no Supabase
+      - name: Login e leitura no Supabase
         run: |
-          status=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://zryazxwxrufzeyaoeqbm.supabase.co/rest/v1/txns?select=id&limit=1" \
-            -H "apikey: sb_publishable_Hux6NxPxXSMnb1gW5gDXzA_j5ja3bhN")
-          echo "HTTP $status"
-          if [ "$status" -ge 400 ]; then exit 1; fi
+          if [ -z "$PING_EMAIL" ] || [ -z "$PING_PASSWORD" ]; then
+            echo "Segredos SUPABASE_PING_EMAIL / SUPABASE_PING_PASSWORD não configurados"; exit 1
+          fi
+          body=$(jq -n --arg e "$PING_EMAIL" --arg p "$PING_PASSWORD" '{email:$e,password:$p}')
+          token=""
+          for i in 1 2 3; do
+            token=$(curl -sS -X POST "$SB_URL/auth/v1/token?grant_type=password" \
+              -H "apikey: $SB_KEY" -H "Content-Type: application/json" -d "$body" \
+              | jq -r '.access_token // empty')
+            [ -n "$token" ] && break
+            echo "Tentativa $i de login falhou; nova tentativa em 30s"; sleep 30
+          done
+          if [ -z "$token" ]; then echo "Falha no login"; exit 1; fi
+          echo "Login OK"
+          n=$(curl -sS "$SB_URL/rest/v1/txns?select=id&limit=5" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $token" \
+            | jq 'if type=="array" then length else -1 end')
+          echo "Lançamentos lidos: $n"
+          if [ "$n" -lt 1 ]; then echo "Nenhum lançamento retornado — verificar permissão do usuário de ping"; exit 1; fi
