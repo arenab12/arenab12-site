@@ -114,10 +114,10 @@ const ICON = {
 /* papel → sistemas visíveis */
 const SYSTEMS = [
   {id:'fin', href:'financeiro/', title:'Financeiro', text:'Receitas, despesas, DRE anual e importação dos extratos.', roles:['socio']},
-  {id:'gq', href:'quadras/', title:'Gestão de quadras', text:'Agenda, mensalistas, clientes, eventos e recebimentos. As reservas reais continuam no WebQuadras.', roles:['socio','recepcao'], tag:'Teste'},
+  {id:'gq', href:'quadras/', title:'Gestão de quadras', text:'Agenda, mensalistas, clientes, eventos e recebimentos. As reservas reais continuam no WebQuadras.', roles:['socio','caixa','recepcao'], tag:'Teste'},
   {id:'esc', href:'escola/', title:'Escola de futebol', text:'Meninos da Vila · alunos, mensalidades e repasse para a Arena.', roles:['socio','escola'], tag:'Em construção'}
 ];
-const ROLE_NAME = {socio:'Sócio', recepcao:'Recepção', escola:'Escola de futebol'};
+const ROLE_NAME = {socio:'Sócio', caixa:'Caixa', recepcao:'Caixa', escola:'Escola de futebol'};
 
 async function showHub(session){
   $('#loginView').hidden = true; $('#hubView').hidden = false;
