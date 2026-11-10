@@ -51,8 +51,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:22;backgroun
 .brand{font-family:var(--f-display);font-stretch:125%;font-weight:800;letter-spacing:.02em;font-size:17px;display:flex;align-items:baseline;gap:8px;white-space:nowrap}
 .brand .mk{color:var(--accent)}
 .brand small{font-stretch:100%;font-weight:500;font-size:11.5px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
-nav.tabs{display:flex;gap:4px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none}
-nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;min-width:0;flex:1 1 auto}
 nav.tabs button{border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted);white-space:nowrap;font-size:13.5px}
 nav.tabs button:hover{background:var(--surface-2);color:var(--fg)}
 nav.tabs button[aria-current="true"]{background:var(--fg);color:var(--bg)}
@@ -167,7 +166,9 @@ input[type=date],input[type=month],input[type=text],input[type=tel],input[type=n
 .recibo .declaracao{margin-top:4px;font-size:12.5px}
 .recibo .assinatura{margin-top:16px;border-top:1px solid var(--line);padding-top:8px;font-size:11.5px;color:var(--muted);text-align:center}
 
-@media (max-width:1180px){ .brand small{display:none} }
+/* tela estreita: abas descem para uma 2ª linha (sem rolagem lateral) e quebram de linha se precisar */
+@media (max-width:1320px){ nav.tabs{order:3;flex:1 1 100%} .seg{margin-left:auto} header.top .topin{row-gap:6px} }
+@media (max-width:560px){ .brand small{display:none} .monthbarin .datenav,.monthbarin .monthscope{display:none} .monthbarin input[type=month]{flex:1;width:auto} }
 
 @media print{
   .no-print{display:none !important}
@@ -953,7 +954,7 @@ function start(){
   let papel = null;
   try { const { data, error } = await supa.rpc('meu_papel'); if (!error) papel = data; } catch(e) {}
   if (!['socio','escola'].includes(papel)) { document.getElementById('deny').hidden = false; return; }
-  if (papel === 'escola') { role = 'escola'; document.querySelector('.seg').hidden = true; } // escola só vê a visão da escola
+  if (papel === 'escola') { role = 'escola'; document.querySelector('.seg').hidden = true; }
   document.getElementById('app').hidden = false;
   start();
 })();
