@@ -5,65 +5,957 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Escola de futebol · Arena B12</title>
 <meta name="robots" content="noindex"/>
-<meta name="theme-color" content="#0a0a0a"/>
 <link rel="icon" href="../../assets/favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
-@font-face{font-family:'Monument Extended';src:url('../../assets/fonts/MonumentExtended-Ultrabold.otf') format('opentype');font-weight:800;font-display:swap}
-@font-face{font-family:'Monument Extended';src:url('../../assets/fonts/MonumentExtended-Black.otf') format('opentype');font-weight:900;font-display:swap}
-/* Página provisória do sistema da escola: uma coluna, mesmo visual da Área da Arena */
-:root{--bg:#0a0a0a;--surf:#121110;--line:#262320;--fg:#f4f0ea;--muted:#9c948a;--orange:#FF620B;--orange-soft:rgba(255,98,11,.10);
-  --f-display:'Monument Extended','Arial Black',system-ui,sans-serif;color-scheme:dark}
+/* ── mesmo sistema visual do CRM da quadra (Arena B12 Gestão): header + abas, .panel/.stats/.list, botões/pills, modais ── */
+:root{
+  --bg:#F4F2EE; --surface:#FFFFFF; --surface-2:#ECE8E2; --line:#DDD7CE;
+  --fg:#1C1A17; --muted:#6C655B; --accent:#FF620B; --accent-ink:#FFFFFF; --accent-soft:#FFE7D8;
+  --ok:#1E844A; --ok-soft:#DCF1E3; --warn:#A86300; --warn-soft:#FBEED3; --bad:#BF3328; --bad-soft:#F9E0DD;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:10px; --h-top:56px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#131211; --surface:#1C1A18; --surface-2:#262320; --line:#35312C;
+  --fg:#F1EDE7; --muted:#A49C91; --accent:#FF7A30; --accent-ink:#1A0E06; --accent-soft:#3B2517;
+  --ok:#4CC27E; --ok-soft:#163122; --warn:#E8A43A; --warn-soft:#33270F; --bad:#F0675A; --bad-soft:#3A1A17;
+  color-scheme:dark}}
+
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
-body{padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums;margin:0;min-height:100%}
+html,body{height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1080px;margin:0 auto}
+a{color:var(--accent)}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.01em}
+h2{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.04em}
+h3{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:14px}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:22;background:var(--surface);border-bottom:1px solid var(--line)}
+.topin{display:flex;align-items:center;gap:16px;padding-block:11px;flex-wrap:wrap}
+.brand{font-family:var(--f-display);font-stretch:125%;font-weight:800;letter-spacing:.02em;font-size:17px;display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.brand .mk{color:var(--accent)}
+.brand small{font-stretch:100%;font-weight:500;font-size:11.5px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted);white-space:nowrap;font-size:13.5px}
+nav.tabs button:hover{background:var(--surface-2);color:var(--fg)}
+nav.tabs button[aria-current="true"]{background:var(--fg);color:var(--bg)}
+nav.tabs .count{display:inline-block;margin-left:6px;background:var(--surface-2);color:var(--muted);font-size:10.5px;padding:1px 6px;border-radius:999px}
+nav.tabs button[aria-current="true"] .count{background:rgba(255,255,255,.18);color:inherit}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:0 0 auto}
+.seg button{border:0;background:transparent;padding:7px 12px;font-weight:700;cursor:pointer;color:var(--muted);white-space:nowrap;font-size:12.5px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* month navigator */
+.monthbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--h-top));z-index:21;background:var(--bg);border-bottom:1px solid var(--line)}
+.monthbarin{display:flex;align-items:center;gap:8px;padding-block:9px}
+.monthbarin input[type=month]{width:160px;padding:5px 10px}
+.monthbarin .btn.sm{min-width:30px}
+.datenav .day{font-family:var(--f-display);font-stretch:115%;font-weight:700;font-size:16px;text-transform:capitalize;margin-left:4px}
+.monthscope{font-size:11.5px;color:var(--muted)}
+
+main{padding-block:18px 48px}
+
+/* banner */
+.banner{padding:10px 14px;border-radius:var(--r);background:var(--warn-soft);color:var(--warn);font-size:12.5px;font-weight:500}
+.banner.info{background:var(--surface-2);color:var(--muted)}
+.banner b{color:var(--fg)}
+
+/* panel / stats */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.panel + .panel{margin-top:16px}
+.ph{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ph h2{flex:1;min-width:0}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;display:grid;gap:4px}
+.stat .s{font-size:11.5px;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--f-display);font-stretch:115%;font-weight:700;font-size:23px;line-height:1.15}
+.stat .v.accent{color:var(--accent)}
+
+/* table */
+.tblwrap{overflow-x:auto;overflow-y:hidden;padding-bottom:2px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.tblwrap::-webkit-scrollbar{height:7px}
+.tblwrap::-webkit-scrollbar-track{background:transparent}
+.tblwrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.tblwrap::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+table.list{width:100%;border-collapse:collapse;min-width:560px}
+.list th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:9px 11px;border-bottom:1px solid var(--line);white-space:nowrap}
+.list td{padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:13.5px;white-space:nowrap}
+.list tr:last-child td{border-bottom:0}
+.list tr.click{cursor:pointer}
+.list tr.click:hover td{background:var(--surface-2)}
+.list .num{text-align:right;white-space:nowrap}
+.empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:13px}
+.example-tag{font-size:10px;color:var(--muted);font-style:italic}
+.list .sub{font-size:11.5px;color:var(--muted);font-weight:400;margin-top:1px}
+table.list.stack{min-width:0}
+@media (max-width:720px){
+  .stack thead{display:none}
+  .stack tr{display:block;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .stack tr:last-child{border-bottom:0}
+  .stack td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border:0;white-space:normal}
+  .stack td::before{content:attr(data-label);color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;flex:none}
+  .stack td > div.sub{display:none}
+  .stack td:first-child{display:block}
+  .stack td:first-child::before{display:none}
+  .stack td:first-child .sub{display:block}
+  .stack td.empty{display:block;text-align:center}
+  .stack td.empty::before{display:none}
+}
+
+/* buttons / pills */
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap;font-size:13.5px}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.05)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.rowdel{background:transparent;border:1px solid var(--line);color:var(--muted);width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:13px;line-height:1}
+.rowdel:hover{color:var(--bad);border-color:var(--bad)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill select{appearance:none;background:transparent;border:0;color:inherit;font:inherit;font-weight:700;padding:0}
+
+/* form fields */
+input[type=date],input[type=month],input[type=text],input[type=tel],input[type=number],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0;width:100%}
+.f{display:grid;gap:5px;min-width:0}
+.f > label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.g2{grid-template-columns:1fr}}
+
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(28,26,23,.55);z-index:40;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 24px max(12px,env(safe-area-inset-left,0px))}
+.ov[hidden]{display:none}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.mh{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.mh h2{flex:1;text-transform:none;letter-spacing:0;font-size:16px}
+.mh .x{background:transparent;border:0;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
+.mh .x:hover{color:var(--fg)}
+.mb{padding:16px 18px;display:grid;gap:14px}
+.mf{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13.5px}
+.kv dt{color:var(--muted);margin:0}
+.kv dd{margin:0;font-weight:600;text-align:right}
+
+/* recibo */
+.recibo{font-size:13px;line-height:1.5}
+.recibo h3{font-size:17px;margin-bottom:2px}
+.recibo .sub{color:var(--muted);font-size:11.5px;margin-bottom:12px}
+.recibo .declaracao{margin-top:4px;font-size:12.5px}
+.recibo .assinatura{margin-top:16px;border-top:1px solid var(--line);padding-top:8px;font-size:11.5px;color:var(--muted);text-align:center}
+
+@media (max-width:1180px){ .brand small{display:none} }
+
+@media print{
+  .no-print{display:none !important}
+  header.top,.monthbar,main > section{display:none !important}
+  body{background:#fff}
+  #reciboModal{position:static;background:#fff;display:block;padding:0;
+    --surface:#fff; --fg:#111; --muted:#555; --line:#ccc; --bg:#fff;
+  }
+  #reciboModal .modal{max-width:100%;box-shadow:none;border:0}
+}
+
 [hidden]{display:none!important}
-a{color:inherit}
-.wrap{max-width:760px;margin:0 auto;padding-block:28px 48px;display:grid;gap:20px}
-.top{display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid var(--line)}
-.top img{height:20px;display:block}
-.top a.back{margin-left:auto;font-size:13px;color:var(--muted);text-decoration:none}
-.top a.back:hover{color:var(--fg)}
-.eyebrow{font-family:var(--f-display);font-size:11px;letter-spacing:.18em;color:var(--orange)}
-h1{font-family:var(--f-display);font-weight:900;font-size:clamp(24px,5.4vw,34px);text-transform:uppercase;line-height:1.05;margin:4px 0 0}
-p{margin:0;color:var(--muted);max-width:62ch}
-.box{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:12px}
-.box h2{font-family:var(--f-display);font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0}
-ul{margin:0;padding-left:18px;display:grid;gap:6px;color:var(--fg)}
-li span{color:var(--muted)}
-.deny{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:22px;color:var(--muted)}
+.back{font-size:12.5px;color:var(--muted);text-decoration:none;white-space:nowrap}
+.back:hover{color:var(--fg)}
+.deny{max-width:560px;margin:40px auto;padding:22px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);color:var(--muted)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top"><a href="../../" aria-label="Ir para o site"><img src="../../assets/logo-horizontal.png" alt="Arena B12"/></a><a class="back" href="../">← Área da Arena</a></header>
-  <div id="ok" hidden>
-    <div class="eyebrow">MENINOS DA VILA · SANTOS FC</div>
-    <h1>Escola de futebol</h1>
-    <p style="margin-top:8px">O sistema da escola está em construção. Aqui vai ficar tudo o que a escola precisa no dia a dia, e o acerto com a Arena calculado automaticamente.</p>
+<div id="app" hidden>
+<header class="top"><div class="wrap topin">
+  <div class="brand"><span class="mk">B12</span><small>Escola de Futebol — Meninos da Vila</small></div>
+  <nav class="tabs" id="tabrow"></nav>
+  <div class="seg" role="group" aria-label="Alternar visão">
+    <button id="btnEscola" aria-pressed="true" onclick="setRole('escola')">Escola</button>
+    <button id="btnArena" aria-pressed="false" onclick="setRole('socio')">Arena</button>
   </div>
-  <div class="box" id="plan" hidden>
-    <h2>O que vem por aí</h2>
-    <ul>
-      <li>Alunos e responsáveis <span>· idade, turma, contato</span></li>
-      <li>Turmas e horários <span>· de segunda a sexta, das 9h às 17h</span></li>
-      <li>Mensalidades <span>· baixa por PIX, cartão ou dinheiro, e quem está em aberto</span></li>
-      <li>Matrícula e kit de uniforme <span>· fica 100% com a escola</span></li>
-      <li>Eventos <span>· campeonatos, colônia de férias e intercâmbios, com inscrições</span></li>
-      <li>Repasse para a Arena <span>· 25% das mensalidades e das inscrições de eventos, calculado no fechamento do mês</span></li>
-    </ul>
+  <a class="back" href="../">← Área da Arena</a>
+</div></header>
+
+<div class="monthbar"><div class="wrap monthbarin">
+  <button class="btn sm" onclick="shiftMonth(-1)" aria-label="Mês anterior">‹</button>
+  <button class="btn sm" onclick="jumpToday()">Hoje</button>
+  <button class="btn sm" onclick="shiftMonth(1)" aria-label="Próximo mês">›</button>
+  <input type="month" id="monthInput" aria-label="Escolher mês" onchange="setMonthFromInput(this.value)">
+  <div class="datenav"><span class="day" id="monthLabel"></span></div>
+  <span class="monthscope" id="monthScope"></span>
+</div></div>
+
+<main class="wrap">
+  <div class="banner info" style="margin-bottom:16px">Protótipo — os dados ficam só neste navegador. A versão real vai usar o login da Área da Arena (Supabase) para José Eduardo e para os sócios.</div>
+
+  <section id="panel-resumo" hidden>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:1;min-width:220px">
+        <h1>Resumo mensal — repasse</h1>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Calculado sozinho a partir das baixas de mensalidade e dos lançamentos de kit e eventos. Ninguém precisa redigitar nada aqui.</p>
+      </div>
+    </div>
+    <div id="resumoTiles" class="stats"></div>
+    <div class="panel">
+      <div class="ph"><h2>Histórico completo</h2></div>
+      <div class="tblwrap">
+        <table class="list stack">
+          <thead><tr>
+            <th>Mês</th><th class="num">Mensalidades</th><th class="num">Eventos</th>
+            <th class="num">Repasse devido</th><th>Status</th><th>Data pagto.</th>
+          </tr></thead>
+          <tbody id="resumoBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-alunos" hidden>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:1;min-width:220px">
+        <h1>Alunos</h1>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Cadastro completo de cada aluno: CPF, RG, responsável, endereço e contato de emergência. Clique numa linha para ver, editar ou gerar o recibo de matrícula.</p>
+      </div>
+      <button class="btn pri" id="btnNovoAluno" onclick="abrirNovoAluno()">+ Novo aluno</button>
+    </div>
+    <div class="banner info" id="banner-alunos" hidden style="margin-bottom:12px">Visão da Arena: <b>somente leitura</b>. Quem cadastra aluno é a escola.</div>
+    <div class="panel">
+      <div class="tblwrap"><table class="list">
+        <thead><tr><th>Nome</th><th>Responsável</th><th class="num">Mensalidade (R$)</th><th>Status</th></tr></thead>
+        <tbody id="alunosBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="panel-mensalidades" hidden>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:1;min-width:220px">
+        <h1>Mensalidades do mês</h1>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Um aluno por linha, gerado sozinho a partir do cadastro. Dê baixa quando o pagamento daquele aluno cair na conta.</p>
+      </div>
+    </div>
+    <div class="banner info" id="banner-mensalidades" hidden style="margin-bottom:12px">Visão da Arena: <b>somente leitura</b>. Quem dá baixa é a escola — a Arena confere pelo Resumo.</div>
+    <div class="panel">
+      <div class="tblwrap"><table class="list">
+        <thead><tr><th>Aluno</th><th class="num">Mensalidade (R$)</th><th>Status</th><th>Pago em</th><th>Forma</th><th></th></tr></thead>
+        <tbody id="mensalidadesBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="panel-kits" hidden>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:1;min-width:220px">
+        <h1>Vendas de kit / uniforme</h1>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Sem repasse — fica 100% com a escola. Registrado só pra transparência.</p>
+      </div>
+      <button class="btn pri" id="btnNovoKit" onclick="abrirNovoKit()">+ Lançar venda</button>
+    </div>
+    <div class="banner info" id="banner-kits" hidden style="margin-bottom:12px">Visão da Arena: <b>somente leitura</b>. Quem lança aqui é a escola.</div>
+    <div class="panel">
+      <div class="tblwrap"><table class="list">
+        <thead><tr><th>Data</th><th>Mês</th><th>Aluno</th><th class="num">Valor (R$)</th><th>Forma</th><th></th></tr></thead>
+        <tbody id="kitsBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="panel-eventos" hidden>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:1;min-width:220px">
+        <h1>Eventos de fim de semana</h1>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Campeonatos, colônia de férias, intercâmbios. Repasse de 25% sobre as inscrições.</p>
+      </div>
+      <button class="btn pri" id="btnNovoEvento" onclick="abrirNovoEvento()">+ Lançar evento</button>
+    </div>
+    <div class="banner info" id="banner-eventos" hidden style="margin-bottom:12px">Visão da Arena: <b>somente leitura</b>. Quem lança aqui é a escola.</div>
+    <div class="panel">
+      <div class="tblwrap"><table class="list">
+        <thead><tr><th>Data</th><th>Mês</th><th>Evento</th><th class="num">Participantes</th><th class="num">Receita (R$)</th><th></th></tr></thead>
+        <tbody id="eventosBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+
+<!-- modal: aluno (ver / editar / novo) -->
+<div class="ov" id="alunoModal" hidden onclick="if(event.target===this) fecharAlunoModal()">
+  <div class="modal">
+    <div class="mh"><h2 id="alunoModalTitle">Aluno</h2><button class="x" onclick="fecharAlunoModal()" aria-label="Fechar">×</button></div>
+    <div class="mb" id="alunoModalBody"></div>
+    <div class="mf" id="alunoModalFooter"></div>
   </div>
-  <div class="deny" id="deny" hidden>Seu login não tem acesso ao sistema da escola. <a href="../">Voltar à Área da Arena</a></div>
 </div>
+
+<!-- modal: dar baixa mensalidade -->
+<div class="ov" id="baixaModal" hidden onclick="if(event.target===this) fecharBaixa()">
+  <div class="modal">
+    <div class="mh"><h2>Dar baixa — mensalidade</h2><button class="x" onclick="fecharBaixa()" aria-label="Fechar">×</button></div>
+    <div class="mb">
+      <div class="kv"><dt>Aluno</dt><dd id="baixaAlunoNome"></dd><dt>Mês</dt><dd id="baixaMes"></dd></div>
+      <div class="g2">
+        <div class="f"><label>Data do pagamento</label><input type="date" id="baixaData"></div>
+        <div class="f"><label>Valor (R$)</label><input type="number" min="0" step="1" id="baixaValor"></div>
+      </div>
+      <div class="f"><label>Forma de pagamento</label><select id="baixaForma"><option>Pix</option><option>Dinheiro</option><option>Cartão</option></select></div>
+    </div>
+    <div class="mf"><button class="btn pri" onclick="confirmarBaixaModal()">Confirmar baixa</button><button class="btn ghost" onclick="fecharBaixa()">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- modal: lançar venda de kit -->
+<div class="ov" id="kitModal" hidden onclick="if(event.target===this) fecharKitModal()">
+  <div class="modal">
+    <div class="mh"><h2>Lançar venda de kit</h2><button class="x" onclick="fecharKitModal()" aria-label="Fechar">×</button></div>
+    <div class="mb">
+      <div class="g2">
+        <div class="f"><label>Data da venda</label><input type="date" id="kitData"></div>
+        <div class="f"><label>Aluno</label><select id="kitAluno"></select></div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>Valor recebido (R$)</label><input type="number" min="0" step="1" id="kitValor"></div>
+        <div class="f"><label>Forma</label><select id="kitForma"><option>Pix</option><option>Dinheiro</option><option>Cartão</option></select></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn pri" onclick="salvarKit()">Lançar venda</button><button class="btn ghost" onclick="fecharKitModal()">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- modal: lançar evento -->
+<div class="ov" id="eventoModal" hidden onclick="if(event.target===this) fecharEventoModal()">
+  <div class="modal">
+    <div class="mh"><h2>Lançar evento</h2><button class="x" onclick="fecharEventoModal()" aria-label="Fechar">×</button></div>
+    <div class="mb">
+      <div class="f"><label>Nome do evento</label><input type="text" id="eventoNome" placeholder="Colônia de férias"></div>
+      <div class="g2">
+        <div class="f"><label>Data do evento</label><input type="date" id="eventoData"></div>
+        <div class="f"><label>Participantes</label><input type="number" min="0" step="1" id="eventoParticipantes"></div>
+      </div>
+      <div class="f"><label>Receita recebida (R$)</label><input type="number" min="0" step="1" id="eventoValor"></div>
+    </div>
+    <div class="mf"><button class="btn pri" onclick="salvarEvento()">Lançar evento</button><button class="btn ghost" onclick="fecharEventoModal()">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- modal: recibo de matrícula -->
+<div class="ov" id="reciboModal" hidden onclick="if(event.target===this) fecharRecibo()">
+  <div class="modal">
+    <div class="mh no-print"><h2>Recibo de matrícula</h2><button class="x" onclick="fecharRecibo()" aria-label="Fechar">×</button></div>
+    <div class="mb"><div id="reciboPrintArea"></div></div>
+    <div class="mf no-print">
+      <button class="btn pri" onclick="imprimirRecibo()">Imprimir / Salvar PDF</button>
+      <button class="btn ghost" id="btnCopiarRecibo" onclick="copiarRecibo()">Copiar texto (WhatsApp)</button>
+      <button class="btn ghost" onclick="fecharRecibo()">Fechar</button>
+    </div>
+  </div>
+</div>
+</div>
+<div class="deny" id="deny" hidden>Seu login não tem acesso ao sistema da escola. <a href="../">Voltar à Área da Arena</a></div>
 <script>
+// ── state ──────────────────────────────────────────────────────────
+const LS_KEY = 'b12-escola-proto-v2';
+const LS_MONTH_KEY = LS_KEY + '-month';
+const LS_ROLE_KEY = LS_KEY + '-role';
+const PCT_MENSALIDADE = 0.25, PCT_EVENTOS = 0.25;
+const DUE_DAY = 10; // mesmo padrão da Gestão de quadras: sem baixa até o dia 10 pesa como atrasado
+
+function seed(){
+  return {
+    alunos:[{id:'a1', nome:'João da Silva (exemplo)', matricula:'2026-10-05', mensalidade:200, status:'Ativo',
+      responsavel:'Maria da Silva (exemplo)', cpf:'000.000.000-00', rg:'00.000.000-0',
+      endereco:'Rua Exemplo, 123 — Campeche, Florianópolis/SC', emergenciaNome:'Maria da Silva', emergenciaTelefone:'(48) 90000-0000'}],
+    // cobrancas: baixa de mensalidade por aluno x mês. chave = `${alunoId}__${mes}`
+    cobrancas:{ 'a1__2026-10': {valor:200, data:'2026-10-10', forma:'Pix'} },
+    kits:[{id:'k1', data:'2026-10-05', mes:'2026-10', aluno:'João da Silva (exemplo)', valor:320, forma:'Pix'}],
+    eventos:[{id:'e1', data:'2026-10-18', mes:'2026-10', nome:'Colônia de férias (exemplo)', participantes:20, valor:1500}],
+    repasse:{'2026-10':{status:'Pendente', dataPagamento:''}},
+  };
+}
+
+let state;
+try{
+  const raw = localStorage.getItem(LS_KEY);
+  state = raw ? JSON.parse(raw) : seed();
+}catch(e){ state = seed(); }
+
+// migração de um protótipo anterior (v1) que usava uma lista livre "pagamentos"
+if(state.pagamentos && !state.cobrancas){
+  state.cobrancas = {};
+  state.pagamentos.forEach(p=>{
+    const aluno = state.alunos.find(a=>a.nome===p.aluno);
+    if(aluno) state.cobrancas[aluno.id+'__'+p.mes] = {valor:p.valor, data:p.data, forma:p.forma};
+  });
+  delete state.pagamentos;
+}
+if(!state.cobrancas) state.cobrancas = {};
+
+let role = (function(){ try{ return localStorage.getItem(LS_ROLE_KEY) || 'escola'; }catch(e){ return 'escola'; } })();
+
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function saveRole(){ try{ localStorage.setItem(LS_ROLE_KEY, role); }catch(e){} }
+function saveMonth(){ try{ localStorage.setItem(LS_MONTH_KEY, activeMonth); }catch(e){} }
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function escAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function mesFromDate(d){ return d ? d.slice(0,7) : ''; }
+const MESES_EXT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const MESES_ABR = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function mesLabel(m){
+  if(!m) return '—';
+  const [y,mo] = m.split('-');
+  return MESES_ABR[parseInt(mo,10)-1] + '/' + y;
+}
+function mesLabelExt(m){
+  const [y,mo] = m.split('-');
+  return MESES_EXT[parseInt(mo,10)-1] + ' ' + y;
+}
+function addMonths(m, delta){
+  const [y,mo] = m.split('-').map(Number);
+  const d = new Date(Date.UTC(y, mo-1+delta, 1));
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0');
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function todayMonth(){ return mesFromDate(todayISO()); }
+function brl(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}); }
+function fmtDate(d){
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ── active month (navigator) ─────────────────────────────────────
+let activeMonth = (function(){
+  try{ return localStorage.getItem(LS_MONTH_KEY); }catch(e){ return null; }
+})() || todayMonth();
+function shiftMonth(delta){ activeMonth = addMonths(activeMonth, delta); saveMonth(); renderAll(); }
+function jumpToday(){ activeMonth = todayMonth(); saveMonth(); renderAll(); }
+function setMonthFromInput(v){
+  if(!/^\d{4}-\d{2}$/.test(v||'')) return;
+  activeMonth = v; saveMonth(); renderAll();
+}
+function renderMonthbar(){
+  document.getElementById('monthInput').value = activeMonth;
+  document.getElementById('monthLabel').textContent = mesLabelExt(activeMonth);
+  document.getElementById('monthScope').textContent = activeMonth===todayMonth() ? '(mês atual)' : '';
+}
+
+// ── tabs ───────────────────────────────────────────────────────────
+const TABS = [
+  {id:'resumo', label:'Resumo'},
+  {id:'alunos', label:'Alunos'},
+  {id:'mensalidades', label:'Mensalidades'},
+  {id:'kits', label:'Kit / uniforme'},
+  {id:'eventos', label:'Eventos'},
+];
+function tabCount(id){
+  if(id==='alunos') return state.alunos.length;
+  if(id==='mensalidades') return alunosAtivosNoMes(activeMonth).length;
+  if(id==='kits') return state.kits.length;
+  if(id==='eventos') return state.eventos.length;
+  return '';
+}
+function renderTabs(){
+  const row = document.getElementById('tabrow');
+  row.innerHTML = TABS.map(t=>{
+    const count = tabCount(t.id);
+    return `<button aria-current="${t.id===currentTab}" onclick="selectTab('${t.id}')">${t.label}${count!==''?`<span class="count">${count}</span>`:''}</button>`;
+  }).join('');
+}
+let currentTab = (location.hash||'').replace('#','') || 'resumo';
+if(!TABS.some(t=>t.id===currentTab)) currentTab = 'resumo';
+
+function selectTab(id){
+  currentTab = id;
+  location.hash = id;
+  TABS.forEach(t=>{ document.getElementById('panel-'+t.id).hidden = t.id!==id; });
+  renderTabs();
+}
+window.addEventListener('hashchange', ()=>{
+  const id = (location.hash||'').replace('#','');
+  if(TABS.some(t=>t.id===id)) selectTab(id);
+});
+
+// ── role ───────────────────────────────────────────────────────────
+function setRole(r){
+  role = r; saveRole();
+  document.getElementById('btnEscola').setAttribute('aria-pressed', role==='escola');
+  document.getElementById('btnArena').setAttribute('aria-pressed', role==='socio');
+  renderAll();
+}
+function applyRoleGating(){
+  const isSocio = role==='socio';
+  ['banner-alunos','banner-mensalidades','banner-kits','banner-eventos'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.hidden = !isSocio;
+  });
+  ['btnNovoAluno','btnNovoKit','btnNovoEvento'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.hidden = isSocio;
+  });
+}
+
+// ── alunos: lista ────────────────────────────────────────────────
+function renderAlunos(){
+  const body = document.getElementById('alunosBody');
+  if(!state.alunos.length){ body.innerHTML = `<tr><td colspan="4" class="empty">Nenhum aluno cadastrado ainda.</td></tr>`; return; }
+  body.innerHTML = state.alunos.map(a=>{
+    const nomeTag = a.id==='a1' ? ' <span class="example-tag">(exemplo)</span>' : '';
+    return `<tr class="click" onclick="abrirAluno('${a.id}')">
+      <td>${a.nome}${nomeTag}</td>
+      <td>${a.responsavel || '—'}</td>
+      <td class="num">${brl(a.mensalidade)}</td>
+      <td><span class="pill ${a.status==='Ativo'?'ok':'bad'}">${a.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── alunos: modal ver / editar / novo ───────────────────────────
+let alunoModalMode = null; // 'view' | 'edit' | 'new'
+let alunoModalId = null;
+function abrirAluno(id){
+  alunoModalId = id; alunoModalMode = 'view';
+  renderAlunoModal();
+  document.getElementById('alunoModal').hidden = false;
+}
+function abrirNovoAluno(){
+  alunoModalId = null; alunoModalMode = 'new';
+  renderAlunoModal();
+  document.getElementById('alunoModal').hidden = false;
+}
+function fecharAlunoModal(){
+  document.getElementById('alunoModal').hidden = true;
+  alunoModalId = null; alunoModalMode = null;
+}
+function editarAlunoModal(){ alunoModalMode = 'edit'; renderAlunoModal(); }
+function cancelarAlunoModal(){
+  if(alunoModalMode==='new'){ fecharAlunoModal(); }
+  else { alunoModalMode = 'view'; renderAlunoModal(); }
+}
+function campo(label, name, value, opts){
+  opts = opts || {};
+  if(opts.type==='select'){
+    return `<div class="f"><label>${label}</label><select name="${name}">${opts.options}</select></div>`;
+  }
+  return `<div class="f"><label>${label}</label><input name="${name}" type="${opts.type||'text'}" value="${escAttr(value)}" ${opts.placeholder?`placeholder="${opts.placeholder}"`:''}></div>`;
+}
+function renderAlunoModal(){
+  const title = document.getElementById('alunoModalTitle');
+  const body = document.getElementById('alunoModalBody');
+  const foot = document.getElementById('alunoModalFooter');
+  const isNew = alunoModalMode==='new';
+  const a = isNew ? {mensalidade:200,status:'Ativo'} : state.alunos.find(x=>x.id===alunoModalId);
+  if(!a){ fecharAlunoModal(); return; }
+
+  if(alunoModalMode==='view'){
+    title.textContent = a.nome.replace(' (exemplo)','');
+    body.innerHTML = `
+      <div class="kv">
+        <dt>Responsável</dt><dd>${a.responsavel||'—'}</dd>
+        <dt>CPF</dt><dd>${a.cpf||'—'}</dd>
+        <dt>RG</dt><dd>${a.rg||'—'}</dd>
+        <dt>Endereço</dt><dd>${a.endereco||'—'}</dd>
+        <dt>Contato de emergência</dt><dd>${a.emergenciaNome ? a.emergenciaNome+(a.emergenciaTelefone?' · '+a.emergenciaTelefone:'') : '—'}</dd>
+        <dt>Data de matrícula</dt><dd>${fmtDate(a.matricula)}</dd>
+        <dt>Mensalidade</dt><dd>${brl(a.mensalidade)}</dd>
+        <dt>Status</dt><dd><span class="pill ${a.status==='Ativo'?'ok':'bad'}">${a.status}</span></dd>
+      </div>`;
+    foot.innerHTML = `
+      <button class="btn pri" onclick="editarAlunoModal()">Editar cadastro</button>
+      <button class="btn" onclick="abrirRecibo('${a.id}')">Gerar recibo</button>
+      <span class="spacer"></span>
+      <button class="btn danger ghost" onclick="confirmarRemoverAluno('${a.id}')">Remover</button>
+      <button class="btn ghost" onclick="fecharAlunoModal()">Fechar</button>`;
+    return;
+  }
+
+  title.textContent = isNew ? 'Novo aluno' : a.nome.replace(' (exemplo)','');
+  body.innerHTML = `
+    <div class="g2">
+      ${campo('Nome do aluno','nome',a.nome||'')}
+      ${campo('Data de matrícula','matricula',a.matricula||'',{type:'date'})}
+    </div>
+    <div class="g2">
+      ${campo('Mensalidade (R$)','mensalidade',a.mensalidade,{type:'number'})}
+      ${campo('Status','status','',{type:'select', options:`<option ${a.status==='Ativo'?'selected':''}>Ativo</option><option ${a.status==='Inativo'?'selected':''}>Inativo</option>`})}
+    </div>
+    ${campo('Responsável','responsavel',a.responsavel||'')}
+    <div class="g2">
+      ${campo('CPF','cpf',a.cpf||'',{placeholder:'000.000.000-00'})}
+      ${campo('RG','rg',a.rg||'')}
+    </div>
+    ${campo('Endereço','endereco',a.endereco||'',{placeholder:'Rua, número, bairro, cidade'})}
+    <div class="g2">
+      ${campo('Emergência — nome','emergenciaNome',a.emergenciaNome||'')}
+      ${campo('Emergência — telefone','emergenciaTelefone',a.emergenciaTelefone||'')}
+    </div>`;
+  foot.innerHTML = `
+    <button class="btn pri" onclick="salvarAlunoModal()">Salvar</button>
+    <button class="btn ghost" onclick="cancelarAlunoModal()">Cancelar</button>`;
+}
+function salvarAlunoModal(){
+  const body = document.getElementById('alunoModalBody');
+  const val = name => { const el = body.querySelector(`[name=${name}]`); return el ? el.value.trim() : ''; };
+  const nome = val('nome');
+  if(!nome) return;
+  const data = {
+    nome, matricula: body.querySelector('[name=matricula]').value,
+    mensalidade: +body.querySelector('[name=mensalidade]').value || 0,
+    status: body.querySelector('[name=status]').value,
+    responsavel: val('responsavel'), cpf: val('cpf'), rg: val('rg'), endereco: val('endereco'),
+    emergenciaNome: val('emergenciaNome'), emergenciaTelefone: val('emergenciaTelefone'),
+  };
+  if(alunoModalMode==='new'){
+    const novo = Object.assign({id:uid()}, data);
+    state.alunos.push(novo);
+    alunoModalId = novo.id;
+  } else {
+    Object.assign(state.alunos.find(x=>x.id===alunoModalId), data);
+  }
+  alunoModalMode = 'view';
+  save(); renderAll(); renderAlunoModal();
+}
+function confirmarRemoverAluno(id){
+  state.alunos = state.alunos.filter(a=>a.id!==id);
+  Object.keys(state.cobrancas).filter(k=>k.startsWith(id+'__')).forEach(k=>delete state.cobrancas[k]);
+  fecharAlunoModal();
+  save(); renderAll();
+}
+
+// ── mensalidades (baixa por aluno x mês) ────────────────────────────
+function alunoAtivoNoMes(a, mes){
+  if(a.matricula && a.matricula.slice(0,7) > mes) return false; // ainda não matriculado nesse mês
+  if(a.status==='Inativo' && a.dataSaida && a.dataSaida.slice(0,7) < mes) return false; // já tinha saído
+  if(a.status==='Inativo' && !a.dataSaida) return mes <= todayMonth() ? true : false; // sem data de saída informada: conta até hoje
+  return true;
+}
+function alunosAtivosNoMes(mes){
+  return state.alunos.filter(a=>alunoAtivoNoMes(a, mes));
+}
+function cobrancaDe(alunoId, mes){
+  return state.cobrancas[alunoId+'__'+mes] || null;
+}
+function statusMensalidade(alunoId, mes){
+  const c = cobrancaDe(alunoId, mes);
+  if(c) return 'Pago';
+  if(mes < todayMonth()) return 'Atrasado';
+  if(mes === todayMonth() && new Date().getDate() > DUE_DAY) return 'Atrasado';
+  return 'Pendente';
+}
+function renderMensalidades(){
+  const body = document.getElementById('mensalidadesBody');
+  const mes = activeMonth;
+  const alunos = alunosAtivosNoMes(mes);
+  const canEdit = role==='escola';
+  if(!alunos.length){
+    body.innerHTML = `<tr><td colspan="6" class="empty">Nenhum aluno ativo em ${mesLabelExt(mes)}.</td></tr>`;
+    return;
+  }
+  body.innerHTML = alunos.map(a=>{
+    const c = cobrancaDe(a.id, mes);
+    const st = statusMensalidade(a.id, mes);
+    const pillCls = st==='Pago' ? 'ok' : st==='Atrasado' ? 'bad' : 'warn';
+    const nomeTag = a.id==='a1' ? ' <span class="example-tag">(exemplo)</span>' : '';
+    const acao = !canEdit ? ''
+      : st==='Pago' ? `<button class="btn sm ghost" onclick="desfazerBaixa('${a.id}','${mes}')">Desfazer</button>`
+      : `<button class="btn sm pri" onclick="abrirBaixaModal('${a.id}','${mes}')">Dar baixa</button>`;
+    return `<tr>
+      <td>${a.nome}${nomeTag}</td>
+      <td class="num">${brl(a.mensalidade)}</td>
+      <td><span class="pill ${pillCls}">${st}</span></td>
+      <td>${c ? fmtDate(c.data) : '—'}</td>
+      <td>${c ? c.forma : '—'}</td>
+      <td>${acao}</td>
+    </tr>`;
+  }).join('');
+}
+let baixaCtx = null;
+function abrirBaixaModal(alunoId, mes){
+  const a = state.alunos.find(x=>x.id===alunoId);
+  if(!a) return;
+  baixaCtx = {alunoId, mes};
+  document.getElementById('baixaAlunoNome').textContent = a.nome.replace(' (exemplo)','');
+  document.getElementById('baixaMes').textContent = mesLabelExt(mes);
+  document.getElementById('baixaData').value = todayISO();
+  document.getElementById('baixaValor').value = a.mensalidade;
+  document.getElementById('baixaForma').value = 'Pix';
+  document.getElementById('baixaModal').hidden = false;
+}
+function fecharBaixa(){ document.getElementById('baixaModal').hidden = true; baixaCtx = null; }
+function confirmarBaixaModal(){
+  if(!baixaCtx) return;
+  const data = document.getElementById('baixaData').value;
+  const valor = +document.getElementById('baixaValor').value;
+  const forma = document.getElementById('baixaForma').value;
+  if(!data || !valor) return;
+  state.cobrancas[baixaCtx.alunoId+'__'+baixaCtx.mes] = {valor, data, forma};
+  fecharBaixa();
+  save(); renderAll();
+}
+function desfazerBaixa(alunoId, mes){
+  delete state.cobrancas[alunoId+'__'+mes];
+  save(); renderAll();
+}
+
+// ── render: kits ───────────────────────────────────────────────────
+function renderKits(){
+  const body = document.getElementById('kitsBody');
+  if(!state.kits.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Nenhuma venda lançada ainda.</td></tr>`; return; }
+  body.innerHTML = state.kits.slice().sort((a,b)=>b.data.localeCompare(a.data)).map(k=>`
+    <tr>
+      <td>${fmtDate(k.data)}</td><td>${mesLabel(k.mes)}</td><td>${k.aluno}${k.id==='k1'?' <span class="example-tag">(exemplo)</span>':''}</td>
+      <td class="num">${brl(k.valor)}</td><td>${k.forma}</td>
+      <td><button class="rowdel" title="Remover" onclick="delRow('kits','${k.id}')">×</button></td>
+    </tr>`).join('');
+}
+function abrirNovoKit(){
+  const sel = document.getElementById('kitAluno');
+  sel.innerHTML = state.alunos.map(a=>`<option value="${escAttr(a.nome)}">${a.nome}</option>`).join('') || `<option value="">Cadastre um aluno primeiro</option>`;
+  document.getElementById('kitData').value = todayISO();
+  document.getElementById('kitValor').value = 320;
+  document.getElementById('kitForma').value = 'Pix';
+  document.getElementById('kitModal').hidden = false;
+}
+function fecharKitModal(){ document.getElementById('kitModal').hidden = true; }
+function salvarKit(){
+  const aluno = document.getElementById('kitAluno').value;
+  const data = document.getElementById('kitData').value;
+  if(!aluno || !data) return;
+  state.kits.push({id:uid(), data, mes:mesFromDate(data), aluno, valor:+document.getElementById('kitValor').value, forma:document.getElementById('kitForma').value});
+  fecharKitModal();
+  save(); renderAll();
+}
+
+// ── render: eventos ────────────────────────────────────────────────
+function renderEventos(){
+  const body = document.getElementById('eventosBody');
+  if(!state.eventos.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Nenhum evento lançado ainda.</td></tr>`; return; }
+  body.innerHTML = state.eventos.slice().sort((a,b)=>b.data.localeCompare(a.data)).map(e=>`
+    <tr>
+      <td>${fmtDate(e.data)}</td><td>${mesLabel(e.mes)}</td><td>${e.nome}${e.id==='e1'?' <span class="example-tag">(exemplo)</span>':''}</td>
+      <td class="num">${e.participantes}</td><td class="num">${brl(e.valor)}</td>
+      <td><button class="rowdel" title="Remover" onclick="delRow('eventos','${e.id}')">×</button></td>
+    </tr>`).join('');
+}
+function abrirNovoEvento(){
+  document.getElementById('eventoData').value = todayISO();
+  document.getElementById('eventoNome').value = '';
+  document.getElementById('eventoParticipantes').value = 20;
+  document.getElementById('eventoValor').value = 1500;
+  document.getElementById('eventoModal').hidden = false;
+}
+function fecharEventoModal(){ document.getElementById('eventoModal').hidden = true; }
+function salvarEvento(){
+  const data = document.getElementById('eventoData').value;
+  const nome = document.getElementById('eventoNome').value.trim();
+  if(!data || !nome) return;
+  state.eventos.push({id:uid(), data, mes:mesFromDate(data), nome, participantes:+document.getElementById('eventoParticipantes').value, valor:+document.getElementById('eventoValor').value});
+  fecharEventoModal();
+  save(); renderAll();
+}
+
+function delRow(col, id){
+  state[col] = state[col].filter(r=>r.id!==id);
+  save(); renderAll();
+}
+
+// ── render: resumo ─────────────────────────────────────────────────
+function monthsInUse(){
+  const s = new Set();
+  Object.keys(state.cobrancas).forEach(k=>s.add(k.split('__')[1]));
+  state.kits.forEach(k=>k.mes && s.add(k.mes));
+  state.eventos.forEach(e=>e.mes && s.add(e.mes));
+  Object.keys(state.repasse).forEach(m=>s.add(m));
+  return [...s].sort().reverse();
+}
+function resumoForMonth(m){
+  const cobrancasDoMes = Object.entries(state.cobrancas).filter(([k])=>k.endsWith('__'+m)).map(([,v])=>v);
+  const nAlunos = cobrancasDoMes.length;
+  const receitaMensalidade = cobrancasDoMes.reduce((a,c)=>a+c.valor,0);
+  const receitaEventos = state.eventos.filter(e=>e.mes===m).reduce((a,e)=>a+e.valor,0);
+  const receitaKit = state.kits.filter(k=>k.mes===m).reduce((a,k)=>a+k.valor,0);
+  const repasseMensalidade = receitaMensalidade*PCT_MENSALIDADE;
+  const repasseEventos = receitaEventos*PCT_EVENTOS;
+  const total = repasseMensalidade+repasseEventos;
+  return {nAlunos, receitaMensalidade, receitaEventos, receitaKit, repasseMensalidade, repasseEventos, total};
+}
+function statusInfo(s){
+  if(s==='Pago') return {cls:'ok'};
+  if(s==='Atrasado') return {cls:'bad'};
+  return {cls:'warn'};
+}
+function renderResumo(){
+  const canEditStatus = role==='socio';
+  const m = activeMonth;
+  const r = resumoForMonth(m);
+  const st = (state.repasse[m]||{}).status || 'Pendente';
+  document.getElementById('resumoTiles').innerHTML = `
+    <div class="stat"><div class="s">Mês selecionado</div><div class="v" style="text-transform:capitalize">${mesLabelExt(m)}</div></div>
+    <div class="stat"><div class="s">Alunos pagantes</div><div class="v">${r.nAlunos}</div></div>
+    <div class="stat"><div class="s">Repasse devido</div><div class="v accent">${brl(r.total)}</div></div>
+    <div class="stat"><div class="s">Status do repasse</div><div class="v"><span class="pill ${statusInfo(st).cls}">${st}</span></div></div>
+  `;
+
+  const months = monthsInUse();
+  const body = document.getElementById('resumoBody');
+  if(!months.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Nada lançado ainda — comece pela aba Alunos e dê baixa nas Mensalidades.</td></tr>`; return; }
+  body.innerHTML = months.map(mo=>{
+    const ro = resumoForMonth(mo);
+    const rep = state.repasse[mo] || {status:'Pendente', dataPagamento:''};
+    const statusCell = canEditStatus
+      ? `<span class="pill ${statusInfo(rep.status).cls}"><select onchange="setRepasseField('${mo}','status',this.value)">
+           ${['Pendente','Pago','Atrasado'].map(s=>`<option ${s===rep.status?'selected':''}>${s}</option>`).join('')}
+         </select></span>`
+      : `<span class="pill ${statusInfo(rep.status).cls}">${rep.status}</span>`;
+    const dataCell = canEditStatus
+      ? `<input type="date" value="${rep.dataPagamento||''}" style="width:132px" onchange="setRepasseField('${mo}','dataPagamento',this.value)">`
+      : fmtDate(rep.dataPagamento);
+    const activeRow = mo===m ? 'style="background:var(--surface-2)"' : '';
+    const alunosTxt = ro.nAlunos + (ro.nAlunos===1 ? ' aluno pagante' : ' alunos pagantes');
+    return `<tr ${activeRow}>
+      <td data-label="Mês"><a href="javascript:void 0" onclick="jumpTo('${mo}')" style="text-decoration:none;font-weight:700">${mesLabel(mo)}</a><div class="sub">${alunosTxt} · kit ${brl(ro.receitaKit)} (sem repasse)</div></td>
+      <td class="num" data-label="Mensalidades">${brl(ro.receitaMensalidade)}<div class="sub">repasse ${brl(ro.repasseMensalidade)}</div></td>
+      <td class="num" data-label="Eventos">${brl(ro.receitaEventos)}<div class="sub">repasse ${brl(ro.repasseEventos)}</div></td>
+      <td class="num" data-label="Repasse devido" style="font-weight:700;color:var(--accent)">${brl(ro.total)}</td>
+      <td data-label="Status">${statusCell}</td>
+      <td data-label="Data pagto.">${dataCell}</td>
+    </tr>`;
+  }).join('');
+}
+function jumpTo(mo){ activeMonth = mo; saveMonth(); renderAll(); }
+function setRepasseField(m, field, value){
+  if(!state.repasse[m]) state.repasse[m] = {status:'Pendente', dataPagamento:''};
+  state.repasse[m][field] = value;
+  save(); renderResumo();
+}
+
+// ── recibo de matrícula ─────────────────────────────────────────────
+let reciboAlunoId = null;
+function reciboNumero(a){
+  return 'M-' + (a.matricula ? a.matricula.replace(/-/g,'') : todayISO().replace(/-/g,'')) + '-' + a.id.slice(0,4).toUpperCase();
+}
+function abrirRecibo(id){
+  reciboAlunoId = id;
+  renderRecibo();
+  document.getElementById('reciboModal').hidden = false;
+}
+function fecharRecibo(){
+  document.getElementById('reciboModal').hidden = true;
+  reciboAlunoId = null;
+}
+function renderRecibo(){
+  const a = state.alunos.find(x=>x.id===reciboAlunoId);
+  const box = document.getElementById('reciboPrintArea');
+  if(!a){ box.innerHTML = ''; return; }
+  const nome = a.nome.replace(' (exemplo)','');
+  const emissao = todayISO();
+  box.innerHTML = `
+    <div class="recibo">
+      <h3>Meninos da Vila Florianópolis — Santos FC</h3>
+      <div class="sub">CNPJ 29.296.963/0001-66 · Rua Damázio Pedro Celestino, nº 170, Casa 02, Campeche, Florianópolis/SC, CEP 88.063-350</div>
+      <div class="sub" style="margin-top:-6px"><b>RECIBO DE MATRÍCULA</b> · nº ${reciboNumero(a)} · emitido em ${fmtDate(emissao)}</div>
+
+      <div class="kv" style="margin-top:10px">
+        <dt>Aluno(a)</dt><dd>${nome}</dd>
+        <dt>CPF do aluno</dt><dd>${a.cpf || '—'}</dd>
+        <dt>RG do aluno</dt><dd>${a.rg || '—'}</dd>
+        <dt>Responsável</dt><dd>${a.responsavel || '—'}</dd>
+        <dt>Endereço</dt><dd>${a.endereco || '—'}</dd>
+        <dt>Contato de emergência</dt><dd>${a.emergenciaNome ? a.emergenciaNome + (a.emergenciaTelefone?' · '+a.emergenciaTelefone:'') : '—'}</dd>
+        <dt>Data da matrícula</dt><dd>${fmtDate(a.matricula)}</dd>
+        <dt>Mensalidade</dt><dd>${brl(a.mensalidade)} por mês</dd>
+      </div>
+
+      <p class="declaracao">Confirmamos a matrícula do(a) aluno(a) acima identificado(a) na escola de futebol Meninos da Vila Florianópolis — Santos FC, com mensalidade no valor de ${brl(a.mensalidade)}, a ser paga mensalmente conforme combinado com a direção da escola.</p>
+
+      <div class="assinatura">Meninos da Vila Florianópolis — Santos FC · documento gerado pelo sistema em ${fmtDate(emissao)}</div>
+    </div>`;
+}
+function imprimirRecibo(){ window.print(); }
+function copiarRecibo(){
+  const a = state.alunos.find(x=>x.id===reciboAlunoId);
+  const btn = document.getElementById('btnCopiarRecibo');
+  if(!a || !btn) return;
+  const nome = a.nome.replace(' (exemplo)','');
+  const texto = [
+    `*Recibo de Matrícula — Meninos da Vila Florianópolis - Santos FC*`,
+    `Aluno(a): ${nome}`,
+    `CPF: ${a.cpf || '—'}`,
+    `RG: ${a.rg || '—'}`,
+    `Responsável: ${a.responsavel || '—'}`,
+    `Endereço: ${a.endereco || '—'}`,
+    `Contato de emergência: ${a.emergenciaNome ? a.emergenciaNome + (a.emergenciaTelefone?' · '+a.emergenciaTelefone:'') : '—'}`,
+    `Data da matrícula: ${fmtDate(a.matricula)}`,
+    `Mensalidade: ${brl(a.mensalidade)} por mês`,
+    ``,
+    `Confirmamos a matrícula do(a) aluno(a) acima na escola de futebol Meninos da Vila Florianópolis - Santos FC.`,
+  ].join('\n');
+  const old = btn.textContent;
+  const ok = ()=>{ btn.textContent = 'Copiado!'; setTimeout(()=>btn.textContent=old, 1600); };
+  const fail = ()=>{ btn.textContent = 'Não copiou — selecione manualmente'; setTimeout(()=>btn.textContent=old, 2200); };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(texto).then(ok).catch(fail);
+    } else { fail(); }
+  }catch(e){ fail(); }
+}
+
+function renderAll(){
+  renderMonthbar();
+  renderTabs();
+  applyRoleGating();
+  renderAlunos();
+  renderMensalidades();
+  renderKits();
+  renderEventos();
+  renderResumo();
+}
+
+// ── sticky header height (mantém a barra de mês colada certinho) ──
+function measureBars(){
+  const top = document.querySelector('header.top');
+  if(top) document.documentElement.style.setProperty('--h-top', top.offsetHeight+'px');
+}
+let resizeT;
+window.addEventListener('resize', ()=>{ clearTimeout(resizeT); resizeT = setTimeout(measureBars, 120); });
+
+// ── boot: exige login (Supabase) e papel socio ou escola ──────────
 const supa = window.supabase.createClient('https://zryazxwxrufzeyaoeqbm.supabase.co', 'sb_publishable_Hux6NxPxXSMnb1gW5gDXzA_j5ja3bhN');
+function start(){
+  document.getElementById('btnEscola').setAttribute('aria-pressed', role==='escola');
+  document.getElementById('btnArena').setAttribute('aria-pressed', role==='socio');
+  selectTab(currentTab);
+  renderAll();
+  measureBars();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(measureBars);
+}
 (async () => {
   const { data: { session } } = await supa.auth.getSession();
   if (!session) { location.replace('../'); return; }
-  let ok = true;
-  try { const { data, error } = await supa.rpc('meu_papel'); if (!error) ok = ['socio','escola'].includes(data); } catch(e) {}
-  document.getElementById(ok ? 'ok' : 'deny').hidden = false;
-  document.getElementById('plan').hidden = !ok;
+  let papel = null;
+  try { const { data, error } = await supa.rpc('meu_papel'); if (!error) papel = data; } catch(e) {}
+  if (!['socio','escola'].includes(papel)) { document.getElementById('deny').hidden = false; return; }
+  if (papel === 'escola') { role = 'escola'; document.querySelector('.seg').hidden = true; } // escola só vê a visão da escola
+  document.getElementById('app').hidden = false;
+  start();
 })();
 </script>
 </body>
