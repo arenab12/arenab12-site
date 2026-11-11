@@ -920,7 +920,7 @@ async function exportEventos(){
   if (!S.dl) { toast("Exportação indisponível neste navegador."); return; }
   const rows = evs.map(b => ({"DATA":brDate(b.date), "INÍCIO":tm(minOf(b)), "FIM":tm(evEnd(b)), "TIPO DE EVENTO":UP(b.eventType||"EVENTO"), "ESPAÇO":UP(courtName(b.court)),
     "CLIENTE":UP(b.clientName), "CPF":fmtCpf(b.cpf)||"", "TELEFONE":fmtPhone(b.phone), "E-MAIL":String(b.email||"").toLowerCase(), "CONVIDADOS":Number(b.guests)||"",
-    "INCLUI":UP((b.items||[]).join(", ")), "VALOR":Number(b.price)||0, "PAGAMENTO":b.paid?"PAGO":"A RECEBER", "DATA DA BAIXA":b.paid?brDate(payDay(b)):"", "FORMA":b.paid?UP(payLabel(paysOf(b, b.price))):"", "OBSERVAÇÕES":b.notes||""}));
+    "INCLUI":UP((b.items||[]).join(", ")), "VALOR":Number(b.price)||0, "PAGAMENTO":b.paid?"PAGO":"A RECEBER", "DATA DO PAGAMENTO":b.paid?brDate(payDay(b)):"", "FORMA":b.paid?UP(payLabel(paysOf(b, b.price))):"", "OBSERVAÇÕES":b.notes||""}));
   const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [11,7,7,26,20,30,15,16,28,11,36,10,11,13,10,50].map(w => ({wch:w}));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Eventos");
   try { await S.dl.save({filename:`arena-b12-eventos-${m}.xlsx`, data:new Blob([XLSX.write(wb, {bookType:"xlsx", type:"array"})])}); toast("Planilha de eventos salva."); }
@@ -939,7 +939,7 @@ function feed(){
       it.push({at:b.createdAt, k, title: title + (b.nameDiff ? ' <span class="pill warn">nome ≠ cadastro</span>' : ""), text:`${who} · ${where} · ${when(b)}`, value:k === "bloqueio" ? null : b.price, ref:"bk:"+b.id, teste:b.teste || b.exemplo});
     }
     if (b.status === "cancelado" && b.cancelledAt) it.push({at:b.cancelledAt, k:"cancel", title: b.cancelledBy === "cliente" ? "Cancelada pelo cliente (link do e-mail)" : "Reserva cancelada na gestão", text:`${who} · ${where} · ${when(b)}`, value:b.price, ref:"bk:"+b.id, teste:b.teste || b.exemplo});
-    if (b.paid && b.kind !== "bloqueio") it.push({at:b.paidRegAt || payDay(b) + "T12:00:00", dayOnly:!b.paidRegAt, k:"pag", title:`Pagamento recebido · ${esc(payLabel(paysOf(b, b.price)))}`, text:`${who} · referente a ${b.kind === "evento" ? "evento" : "jogo"} de ${when(b)}${b.paidRegAt && payDay(b) !== b.paidRegAt.slice(0,10) ? ` · baixa com data ${brDate(payDay(b))}` : ""}`, value:b.price, ref:"bk:"+b.id, teste:b.teste || b.exemplo});
+    if (b.paid && b.kind !== "bloqueio") it.push({at:b.paidRegAt || payDay(b) + "T12:00:00", dayOnly:!b.paidRegAt, k:"pag", title:`Pagamento recebido · ${esc(payLabel(paysOf(b, b.price)))}`, text:`${who} · referente a ${b.kind === "evento" ? "evento" : "jogo"} de ${when(b)}${b.paidRegAt && payDay(b) !== b.paidRegAt.slice(0,10) ? ` · pagamento registrado com data ${brDate(payDay(b))}` : ""}`, value:b.price, ref:"bk:"+b.id, teste:b.teste || b.exemplo});
   }
   for (const r of S.recurring) {
     const who = esc(r.clientName), slot = `${WDs[r.weekday]} ${tm(minOf(r))} · ${esc(courtName(r.court))}`;
@@ -949,7 +949,7 @@ function feed(){
   }
   for (const n of S.notes) {
     it.push({at:n.createdAt, k:"nota", title:`Pagamento anotado${n.by === "caixa" ? " pelo caixa" : ""}${n.value ? ` · ${esc(payLabel(n.pays || []))}` : ""}`, text:`${esc(n.ref ? refLabelOf(n.ref) : "Sem reserva vinculada")}${n.text ? ` · ${esc(n.text)}` : ""}`, value:n.value || null, ref:"nota:" + n.id});
-    if (n.status === "resolvida" && n.resolvedAt) it.push({at:n.resolvedAt, k:"nota", title:n.resolvedHow === "baixa" ? "Anotação resolvida com baixa" : "Anotação marcada como resolvida", text:esc(n.ref ? refLabelOf(n.ref) : n.text || ""), value:null, ref:"nota:" + n.id});
+    if (n.status === "resolvida" && n.resolvedAt) it.push({at:n.resolvedAt, k:"nota", title:n.resolvedHow === "baixa" ? "Anotação resolvida com pagamento registrado" : "Anotação marcada como resolvida", text:esc(n.ref ? refLabelOf(n.ref) : n.text || ""), value:null, ref:"nota:" + n.id});
   }
   for (const c of S.clientsReg) {
     if (c.blocked && c.blockedAt) it.push({at:c.blockedAt, k:"cadastro", title:"Cliente colocado na lista de bloqueio", text:`${esc(c.name)}${c.blockReason?` · ${esc(c.blockReason)}`:""}`, value:null, ref:"cli:"+c.id});
@@ -1015,7 +1015,7 @@ function vMensalistas(){
     <div class="panel stat"><span class="lbl">Mensalistas ativos</span><span class="v">${act.length}</span><span class="s">horários fixos por semana</span></div>
     <div class="panel stat"><span class="lbl">Mensalidades previstas</span><span class="v">${brl(act.reduce((t,r) => t + (Number(r.monthly)||0), 0))}</span><span class="s">por mês, somando os ativos</span></div>
   </section>
-  <p class="muted" style="margin:0;font-size:13px">Aqui ficam o cadastro e os horários fixos. Baixas, vencimentos e valores a receber ficam no Financeiro.</p>
+  <p class="muted" style="margin:0;font-size:13px">Aqui ficam o cadastro e os horários fixos. Pagamentos registrados, vencimentos e valores a receber ficam no Financeiro.</p>
   <div class="panel tblwrap">${rs.length ? `<table class="list"><thead><tr><th>Cliente</th><th>Horário</th><th>Quadra</th><th class="num">Mensalidade</th><th>Situação</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nenhum mensalista cadastrado. Use “Novo mensalista” para fixar um horário semanal.</div>`}</div>`;
 }
 
@@ -1044,9 +1044,9 @@ function vFinanceiro(){
     <td>${esc(payLabel(r.pays))}</td><td class="num">${brl(r.value)}</td></tr>`).join("");
   const pendItems = [
     ...pendBk.map(b => ({sort:b.date + tm(minOf(b)), html:`<tr><td><span class="pill ${b.kind==="evento"?"evt":"ex"}">${b.kind==="evento"?"Evento":"Avulso"}</span></td><td>${b.kind==="evento"?"Evento":"Jogo"} ${short(b.date)} · ${tm(minOf(b))}</td><td><b>${esc(b.clientName)}</b><div class="muted" style="font-size:12px">${esc(courtLabel(b.court))}</div></td>
-      <td class="num">${brl(b.price)}</td><td class="num"><button class="btn sm" data-paybk="${esc(b.id)}">Dar baixa</button></td></tr>`})),
+      <td class="num">${brl(b.price)}</td><td class="num"><button class="btn sm" data-paybk="${esc(b.id)}">Registrar pagamento</button></td></tr>`})),
     ...pendRec.map(x => ({sort:x.due, html:`<tr><td><span class="pill acc">Mensalidade</span></td><td>${esc(monthLabel(x.comp))}<div style="font-size:12px;color:var(--bad)">venceu ${brDate(x.due)}</div></td><td><b>${esc(x.r.clientName)}</b><div class="muted" style="font-size:12px">${WDs[x.r.weekday]} ${tm(minOf(x.r))} · ${esc(courtLabel(x.r.court))}</div></td>
-      <td class="num">${brl(x.value)}</td><td class="num"><button class="btn sm" data-payrec="${esc(x.r.id)}|${x.comp}">Dar baixa</button></td></tr>`}))
+      <td class="num">${brl(x.value)}</td><td class="num"><button class="btn sm" data-payrec="${esc(x.r.id)}|${x.comp}">Registrar pagamento</button></td></tr>`}))
   ].sort((a,b) => a.sort.localeCompare(b.sort));
   const pendRows = pendItems.map(x => x.html).join("");
   const monthRecs = S.recurring.filter(r => { const st = monthOf(r.startDate || r.createdAt || m), en = r.endDate ? monthOf(r.endDate) : null; return st <= m && (!en || en >= m) && recOccurrences(r, m) > 0; })
@@ -1056,25 +1056,25 @@ function vFinanceiro(){
     const st = p ? `<span class="pill ok">Pago ${short(p.at||m+"-01")} · ${esc(payLabel(paysOf(p, p.value ?? r.monthly)))}</span>` : mDue < today() ? `<span class="pill bad">Vencida ${short(mDue)}</span>` : `<span class="pill warn">Vence ${short(mDue)}</span>`;
     return `<tr><td><b>${esc(r.clientName)}</b>${r.exemplo?' <span class="pill ex">exemplo</span>':""}<div class="muted" style="font-size:12px">${WDs[r.weekday]} ${tm(minOf(r))} · ${esc(courtLabel(r.court))} · ${recOccurrences(r, m)} jogos</div></td>
       <td>${st}</td><td class="num">${brl(p ? (p.value ?? r.monthly) : r.monthly)}</td>
-      <td class="num"><button class="btn sm${p?" ghost":""}" data-payrec="${esc(r.id)}|${m}">${p ? "Ver baixa" : "Dar baixa"}</button></td></tr>`; }).join("");
+      <td class="num"><button class="btn sm${p?" ghost":""}" data-payrec="${esc(r.id)}|${m}">${p ? "Ver pagamento" : "Registrar pagamento"}</button></td></tr>`; }).join("");
   const mGot = monthRecs.reduce((t,r) => t + (r.payments && r.payments[m] ? Number(r.payments[m].value ?? r.monthly)||0 : 0), 0), mAll = monthRecs.reduce((t,r) => t + (Number(r.monthly)||0), 0);
-  const soonRows = soonRec.map(x => `<tr><td><span class="pill acc">Mensalidade</span></td><td>${esc(monthLabel(x.comp))}<div class="muted" style="font-size:12px">vence ${brDate(x.due)}</div></td><td><b>${esc(x.r.clientName)}</b></td><td class="num">${brl(x.value)}</td><td class="num"><button class="btn sm ghost" data-payrec="${esc(x.r.id)}|${x.comp}">Dar baixa</button></td></tr>`).join("");
+  const soonRows = soonRec.map(x => `<tr><td><span class="pill acc">Mensalidade</span></td><td>${esc(monthLabel(x.comp))}<div class="muted" style="font-size:12px">vence ${brDate(x.due)}</div></td><td><b>${esc(x.r.clientName)}</b></td><td class="num">${brl(x.value)}</td><td class="num"><button class="btn sm ghost" data-payrec="${esc(x.r.id)}|${x.comp}">Registrar pagamento</button></td></tr>`).join("");
   return `
   <section class="row"><h1>Financeiro</h1><span class="spacer"></span><input type="month" id="mpick" value="${m}" aria-label="Mês">
     <button class="btn pri" id="xls" ${rc.length?"":"disabled"}>Exportar Excel do mês</button></section>
-  <p class="muted" style="margin:0;font-size:13px"><b>A receber</b> é o que já foi jogado ou venceu e ainda não teve baixa. <b>Recebido</b> é o que entrou no caixa, contado pela data da baixa (um jogo de junho pago em novembro entra em novembro).</p>
+  <p class="muted" style="margin:0;font-size:13px"><b>A receber</b> é o que já foi jogado ou venceu e ainda não teve pagamento registrado. <b>Recebido</b> é o que entrou no caixa, contado pela data do pagamento (um jogo de junho pago em novembro entra em novembro).</p>
   <section class="stats">
     <div class="panel stat"><span class="lbl">Recebido em ${esc(monthLabel(m))}</span><span class="v">${brl(sum(rc))}</span><span class="s">${rc.length} recebimentos · avulsos e eventos ${brl(sum(av))} · mensalidades ${brl(sum(me))}</span></div>
-    <div class="panel stat"><span class="lbl">De meses anteriores</span><span class="v">${brl(sum(older))}</span><span class="s">${older.length} jogos ou mensalidades antigos baixados neste mês</span></div>
+    <div class="panel stat"><span class="lbl">De meses anteriores</span><span class="v">${brl(sum(older))}</span><span class="s">${older.length} jogos ou mensalidades antigos pagos neste mês</span></div>
     <div class="panel stat"><span class="lbl">Ainda a receber</span><span class="v" style="color:var(--warn)">${brl(sum(pendBk.map(b => ({value:b.price}))) + sum(pendRec))}</span><span class="s">${pendBk.length} reservas + ${pendRec.length} mensalidades vencidas${soonRec.length ? ` · ${soonRec.length} a vencer dia ${S.cfg.dueDay} (${brl(sum(soonRec))})` : ""}</span></div>
   </section>
-  <div class="panel tblwrap"><div class="ph"><h2>A receber</h2><span class="pill warn">${pendItems.length}</span><span class="muted" style="font-size:12.5px">jogos avulsos sem baixa e mensalidades vencidas (sem baixa até o dia ${S.cfg.dueDay})</span></div>
+  <div class="panel tblwrap"><div class="ph"><h2>A receber</h2><span class="pill warn">${pendItems.length}</span><span class="muted" style="font-size:12.5px">jogos avulsos sem pagamento registrado e mensalidades vencidas (sem pagamento registrado até o dia ${S.cfg.dueDay})</span></div>
     ${pendItems.length ? `<table class="list"><tbody>${pendRows}</tbody></table>` : '<div class="empty">Nada pendente.</div>'}</div>
   <div class="panel tblwrap"><div class="ph"><h2>Mensalidades de ${esc(monthLabel(m))}</h2><span class="pill ex">${monthRecs.length}</span><span class="spacer"></span><span class="muted" style="font-size:12.5px">${brl(mGot)} de ${brl(mAll)} · vencimento dia ${S.cfg.dueDay}</span></div>
     ${monthRecs.length ? `<div class="mb" style="padding-bottom:0"><div class="bar"><i style="width:${mAll?Math.round(mGot/mAll*100):0}%"></i></div></div><table class="list"><tbody>${mRows}</tbody></table>` : '<div class="empty">Nenhum mensalista com jogos neste mês. Cadastre na aba Mensalistas.</div>'}</div>
   <div class="panel tblwrap"><div class="ph"><h2>Recebido no mês</h2><span class="pill ex">${rc.length}</span><span class="spacer"></span><span class="muted" style="font-size:12.5px">Clique numa linha para completar CPF ou e-mail</span></div>
-    ${rc.length ? `<table class="list"><thead><tr><th>Baixa</th><th>Cliente</th><th>Referente a</th><th>Forma</th><th class="num">Valor</th></tr></thead><tbody>${rRows}</tbody></table>` : '<div class="empty">Nenhuma baixa feita neste mês.</div>'}</div>
-  <div class="panel"><div class="ph"><h2>Recebimentos por dia da baixa</h2><span class="spacer"></span><div class="legend"><span style="--c:var(--accent)">Avulsos</span><span style="--c:var(--ok)">Mensalidades</span></div></div><div class="chart">${maxD ? svg : '<div class="empty">Nenhuma baixa feita neste mês.</div>'}</div></div>
+    ${rc.length ? `<table class="list"><thead><tr><th>Pagamento</th><th>Cliente</th><th>Referente a</th><th>Forma</th><th class="num">Valor</th></tr></thead><tbody>${rRows}</tbody></table>` : '<div class="empty">Nenhum pagamento registrado neste mês.</div>'}</div>
+  <div class="panel"><div class="ph"><h2>Recebimentos por dia do pagamento</h2><span class="spacer"></span><div class="legend"><span style="--c:var(--accent)">Avulsos</span><span style="--c:var(--ok)">Mensalidades</span></div></div><div class="chart">${maxD ? svg : '<div class="empty">Nenhum pagamento registrado neste mês.</div>'}</div></div>
   <div class="cols">
     <div class="panel"><div class="ph"><h2>Por forma de pagamento</h2></div><div class="mb">
       ${Object.entries(byMeth).map(([k,v]) => `<div class="f"><div class="row"><span>${METH[k]||k}</span><span class="spacer"></span><b>${brl(v)}</b></div><div class="bar"><i style="width:${totMeth?v/totMeth*100:0}%"></i></div></div>`).join("")}
@@ -1119,7 +1119,7 @@ function vAjustes(){
   <div class="cols">
     <div class="panel"><div class="ph"><h2>Mensalistas</h2></div><div class="mb">
       <label class="f"><span class="lbl">Vencimento da mensalidade</span><div class="row"><span class="muted">dia</span><input type="number" id="cfgDue" min="1" max="28" value="${Number(c.dueDay)}" style="width:80px"><span class="muted">de cada mês</span></div></label>
-      <p class="muted" style="margin:0;font-size:12.5px">Sem baixa até esse dia, a mensalidade entra como valor a receber no Financeiro.</p>
+      <p class="muted" style="margin:0;font-size:12.5px">Sem pagamento registrado até esse dia, a mensalidade entra como valor a receber no Financeiro.</p>
     </div></div>
     <div class="panel"><div class="ph"><h2>Site do cliente</h2></div><div class="mb">
       <div class="f"><span class="lbl">Dias com reserva aberta no site</span><div class="chips" id="siteDays">${WDs.map((w,i) => `<button type="button" data-sday="${i}" aria-pressed="${c.siteDays.includes(i)}">${w}</button>`).join("")}</div>
@@ -1246,7 +1246,7 @@ function bookingModal(b, preset){
       <div data-av class="g2"><label class="f"><span class="lbl" id="bkPriceLbl">Valor (R$)</span><input type="number" id="bkPrice" min="0" step="5" value="${Number(b.price)||0}" ${isCaixa() && !isNew ? "readonly" : ""}></label>
       ${isCaixa() ? `<div class="f"><span class="lbl">Pagamento</span><div class="cxpay">${b.paid ? `<span class="pill ok">Pago · ${esc(payLabel(paysOf(b, b.price)))}</span>` : `<span class="pill warn">Pendente</span><span class="muted" style="font-size:12px">Recebeu? Use “Anotar pagamento”.</span>`}</div><select id="bkPaid" hidden><option value="${b.paid?1:0}" selected></option></select></div>` : `<label class="f"><span class="lbl">Pagamento</span><select id="bkPaid"><option value="0"${!b.paid?" selected":""}>Pendente</option><option value="1"${b.paid?" selected":""}>Pago</option></select></label>`}</div>
       <div data-av data-payrow class="g2" ${b.paid?"":"hidden"}><div class="f"><span class="lbl">Forma de pagamento</span>${splitHTML(paysOf(b, b.price))}</div>
-        <label class="f"><span class="lbl">Data da baixa</span><input type="date" id="bkPayDay" value="${b.paid ? payDay(b) : today()}"></label></div>
+        <label class="f"><span class="lbl">Data do pagamento</span><input type="date" id="bkPayDay" value="${b.paid ? payDay(b) : today()}"></label></div>
       <div data-mens hidden class="g2"><label class="f"><span class="lbl">Mensalidade (R$)</span><input type="number" id="bkMonthly" min="0" step="10" value="${monthlyOf(b.court, b.date, m0)}"></label>
       <p class="muted" style="margin:0;align-self:end;font-size:12.5px">Repete toda semana neste dia e horário, a partir da data escolhida.</p></div>
       ${b.nameDiff && b.regName ? `<div class="namediff"><b>Nome diferente do cadastro.</b> O cliente digitou <b>${esc(b.clientName)}</b>, mas o ${docOk(b.cpf)?"CPF":"WhatsApp"} está cadastrado como <b>${esc(b.regName)}</b>. A nota sai com o nome do cadastro.
@@ -1364,20 +1364,20 @@ function recModal(r, date, comp, pre = {}){
       <dt>WhatsApp</dt><dd>${esc(fmtPhone(r.phone)) || "—"}</dd><dt>CPF</dt><dd>${r.cpf ? esc(fmtCpf(r.cpf)) : '<span style="color:var(--warn)">não informado</span>'}</dd><dt>Mensalidade</dt><dd>${brl(r.monthly)}</dd>
       <dt>${esc(monthLabel(m))}</dt><dd>${paid ? `<span class="pill ok">Pago em ${brDate(paid.at||m+"-01")} · ${esc(payLabel(paysOf(paid, paid.value ?? r.monthly)))} · ${brl(paid.value ?? r.monthly)}</span>` : '<span class="pill warn">Em aberto</span>'}</dd>
       ${r.notes ? `<dt>Obs.</dt><dd style="font-weight:400">${esc(r.notes)}</dd>` : ""}</dl>
-      ${!paid ? `${pre.note ? `<div class="sitenote">Anotação do caixa: ${esc(pre.note)}</div>` : ""}<span class="lbl">Dar baixa na mensalidade de ${esc(monthLabel(m))}</span>
+      ${!paid ? `${pre.note ? `<div class="sitenote">Anotação do caixa: ${esc(pre.note)}</div>` : ""}<span class="lbl">Registrar pagamento da mensalidade de ${esc(monthLabel(m))}</span>
         <div class="g2"><label class="f"><span class="lbl">Valor recebido (R$)</span><input type="number" id="rVal" value="${Number(pre.value ?? r.monthly)||0}" min="0" step="10"></label>
-        <label class="f"><span class="lbl">Data da baixa</span><input type="date" id="rDay" value="${pre.day || today()}"></label></div>
+        <label class="f"><span class="lbl">Data do pagamento</span><input type="date" id="rDay" value="${pre.day || today()}"></label></div>
         <div class="f"><span class="lbl">Forma de pagamento</span>${splitHTML(pre.pays && pre.pays.length ? pre.pays : [{m:"pix", v:Number(pre.value ?? r.monthly)||0}])}</div>` : ""}
     </div>
     <div class="mf">
       ${date ? `<button class="btn" id="rSkip">Liberar só ${short(date)}</button>` : ""}
       <button class="btn ghost" id="rEdit">Editar</button><span class="spacer"></span>
-      ${paid ? `<button class="btn ghost danger" id="rUnpay">Desfazer baixa</button>` : `<button class="btn pri" id="rPay">Dar baixa</button>`}
+      ${paid ? `<button class="btn ghost danger" id="rUnpay">Desfazer pagamento</button>` : `<button class="btn pri" id="rPay">Registrar pagamento</button>`}
     </div>`, root => {
     const sp = $("#split", root) ? bindSplit(root, "#rVal") : null;
     const docSet = payments => { const base = {...r}; delete base.id; base.payments = payments; return S.db.doc("recurring/"+r.id).set(base); };
-    $("#rPay",root)?.addEventListener("click", async () => { const spErr = sp.check(); if (spErr) { toast(spErr); return; } const pays = sp.read(); const p = {...(r.payments||{}), [m]:{method:methodOf(pays), pays, at:$("#rDay",root).value || today(), regAt:new Date().toISOString(), value:Number($("#rVal",root).value)||0}}; if (await write(async () => { await docSet(p); if (pre.noteId) await resolveNote(pre.noteId, "baixa"); }, "Mensalidade baixada.")) closeModal(); });
-    $("#rUnpay",root)?.addEventListener("click", async () => { if (!await ask({title:"Desfazer a baixa desta mensalidade?", text:`Mensalidade de <b>${esc(monthLabel(m))}</b> de ${esc(r.clientName)}. O valor sai do Financeiro e volta para a lista a receber.`, ok:"Desfazer baixa"})) return; const p = {...(r.payments||{})}; delete p[m]; if (await write(() => docSet(p), "Baixa desfeita.")) closeModal(); });
+    $("#rPay",root)?.addEventListener("click", async () => { const spErr = sp.check(); if (spErr) { toast(spErr); return; } const pays = sp.read(); const p = {...(r.payments||{}), [m]:{method:methodOf(pays), pays, at:$("#rDay",root).value || today(), regAt:new Date().toISOString(), value:Number($("#rVal",root).value)||0}}; if (await write(async () => { await docSet(p); if (pre.noteId) await resolveNote(pre.noteId, "baixa"); }, "Pagamento registrado.")) closeModal(); });
+    $("#rUnpay",root)?.addEventListener("click", async () => { if (!await ask({title:"Desfazer o pagamento desta mensalidade?", text:`Mensalidade de <b>${esc(monthLabel(m))}</b> de ${esc(r.clientName)}. O valor sai do Financeiro e volta para a lista a receber.`, ok:"Desfazer pagamento"})) return; const p = {...(r.payments||{})}; delete p[m]; if (await write(() => docSet(p), "Pagamento desfeito.")) closeModal(); });
     $("#rSkip",root)?.addEventListener("click", async () => { if (!await ask({title:`Liberar o horário de ${short(date)}?`, text:`${esc(r.clientName)} não joga neste dia e o horário fica livre para outra reserva. Os outros dias do mensalista continuam iguais.`, ok:"Liberar horário", danger:false})) return; if (await write(() => S.db.doc("skips/" + r.id + "__" + date).set({recId:r.id, date}), `Horário de ${short(date)} liberado.`)) closeModal(); });
     $("#rEdit",root).addEventListener("click", () => recEditModal(r));
   });
@@ -1524,11 +1524,11 @@ function clientEditModal(c){
 
 function payBkModal(b, pre = {}){
   openModal(`
-    <div class="mh"><h2>Dar baixa</h2><span class="spacer"></span><button class="btn sm ghost" data-close aria-label="Fechar">✕</button></div>
+    <div class="mh"><h2>Registrar pagamento</h2><span class="spacer"></span><button class="btn sm ghost" data-close aria-label="Fechar">✕</button></div>
     <div class="mb"><p style="margin:0"><b>${esc(b.clientName)}</b> · jogo em ${brDate(b.date)} às ${tm(minOf(b))} · ${esc(courtLabel(b.court))}</p>
       ${pre.note ? `<div class="sitenote">Anotação do caixa: ${esc(pre.note)}</div>` : ""}
       <div class="g2"><label class="f"><span class="lbl">Valor recebido (R$)</span><input type="number" id="pVal" value="${Number(pre.value ?? b.price)||0}" min="0" step="5"></label>
-      <label class="f"><span class="lbl">Data da baixa</span><input type="date" id="pDay" value="${pre.day || today()}"></label></div>
+      <label class="f"><span class="lbl">Data do pagamento</span><input type="date" id="pDay" value="${pre.day || today()}"></label></div>
       <div class="f"><span class="lbl">Forma de pagamento</span>${splitHTML(pre.pays && pre.pays.length ? pre.pays : [{m:"pix", v:Number(pre.value ?? b.price)||0}])}</div>
       ${b.cpf ? "" : `<label class="f"><span class="lbl">CPF ou CNPJ do cliente (para a nota)</span><input type="text" id="pCpf" inputmode="numeric" placeholder="Opcional" autocomplete="off"></label>`}</div>
     <div class="mf"><span class="spacer"></span><button class="btn ghost" data-close>Fechar</button><button class="btn pri" id="pOk">Confirmar recebimento</button></div>`, root => {
@@ -1563,7 +1563,7 @@ function noteModal(pre = {}){
   openModal(`
     <div class="mh"><h2>Anotar pagamento</h2><span class="spacer"></span><button class="btn sm ghost" data-close aria-label="Fechar">✕</button></div>
     <form class="mb" id="nf" novalidate autocomplete="off">
-      <p class="muted" style="margin:0;font-size:13px">A anotação vai para os sócios, que conferem e dão a baixa no sistema.</p>
+      <p class="muted" style="margin:0;font-size:13px">A anotação vai para os sócios, que conferem e registram o pagamento no sistema.</p>
       <label class="f"><span class="lbl">Referente a</span><select id="nRef"><option value="">Sem reserva vinculada (outro pagamento)</option>${targets.map(t => `<option value="${esc(t.ref)}" data-v="${Number(t.value)||0}"${t.ref===pre.ref?" selected":""}>${esc(t.label)}</option>`).join("")}</select></label>
       <label class="f"><span class="lbl">Valor recebido (R$)</span><input type="number" id="nVal" min="0" step="5" value="${Number(pre.value)||0}"></label>
       <div class="f"><span class="lbl">Forma de pagamento</span>${splitHTML([{m:"pix", v:Number(pre.value)||0}])}</div>
@@ -1593,17 +1593,17 @@ function vNotas(){
     const done = n.status === "resolvida", already = (b && b.paid) || (r && r.payments && r.payments[comp]);
     const when = new Date(n.createdAt);
     return `<div class="ncard${done ? " done" : ""}">
-      <div class="row"><span class="pill ${n.by === "caixa" ? "acc" : "ex"}">${n.by === "caixa" ? "Caixa" : "Master"}</span><span class="muted" style="font-size:12.5px">${when.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})} às ${when.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span><span class="spacer"></span>${done ? `<span class="pill ok">Resolvida${n.resolvedHow === "baixa" ? " · baixa feita" : ""}</span>` : `<span class="pill warn">Aberta</span>`}</div>
+      <div class="row"><span class="pill ${n.by === "caixa" ? "acc" : "ex"}">${n.by === "caixa" ? "Caixa" : "Master"}</span><span class="muted" style="font-size:12.5px">${when.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})} às ${when.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span><span class="spacer"></span>${done ? `<span class="pill ok">Resolvida${n.resolvedHow === "baixa" ? " · pagamento registrado" : ""}</span>` : `<span class="pill warn">Aberta</span>`}</div>
       <b>${esc(n.ref ? refLabelOf(n.ref) : "Sem reserva vinculada")}</b>
       ${n.value ? `<span>${brl(n.value)} · ${esc(payLabel(n.pays || []))}</span>` : ""}
       ${n.text ? `<p class="ntext">${esc(n.text)}</p>` : ""}
-      ${!isCaixa() ? `<div class="row">${!done && b && !already ? `<button class="btn sm pri" data-nbx="${esc(n.id)}">Dar baixa</button>` : ""}${!done && r && !already ? `<button class="btn sm pri" data-nrx="${esc(n.id)}">Dar baixa na mensalidade</button>` : ""}${!done && already ? `<span class="muted" style="font-size:12.5px">Já tem baixa.</span>` : ""}
+      ${!isCaixa() ? `<div class="row">${!done && b && !already ? `<button class="btn sm pri" data-nbx="${esc(n.id)}">Registrar pagamento</button>` : ""}${!done && r && !already ? `<button class="btn sm pri" data-nrx="${esc(n.id)}">Registrar pagamento da mensalidade</button>` : ""}${!done && already ? `<span class="muted" style="font-size:12.5px">Já tem pagamento registrado.</span>` : ""}
         <span class="spacer"></span><button class="btn sm ghost" data-ntog="${esc(n.id)}">${done ? "Reabrir" : "Marcar como resolvida"}</button></div>` : ""}
     </div>`;
   };
   return `
   <section class="row"><h1>Anotações</h1><span class="spacer"></span><button class="btn pri" id="newNote">Nova anotação</button></section>
-  <p class="muted" style="margin:0;font-size:13px">${isCaixa() ? "Anote aqui cada pagamento recebido: de quem, quanto e de que forma. Os sócios conferem e dão a baixa." : "O caixa anota os pagamentos recebidos. Confira, dê a baixa e a anotação fica resolvida."}</p>
+  <p class="muted" style="margin:0;font-size:13px">${isCaixa() ? "Anote aqui cada pagamento recebido: de quem, quanto e de que forma. Os sócios conferem e registram o pagamento." : "O caixa anota os pagamentos recebidos. Confira, registre o pagamento e a anotação fica resolvida."}</p>
   <div class="seg" style="max-width:420px" role="group" aria-label="Filtrar">${[["aberta","Abertas"],["resolvida","Resolvidas"],["todas","Todas"]].map(([k,l]) => `<button type="button" data-nf="${k}" aria-pressed="${f===k}">${l} (${cnt(k)})</button>`).join("")}</div>
   <div class="nlist">${list.length ? list.map(card).join("") : `<div class="panel empty">${f === "aberta" ? "Nenhuma anotação aberta." : "Nenhuma anotação."}</div>`}</div>`;
 }
@@ -1612,7 +1612,7 @@ function vNotas(){
 const UP = s => String(s || "").toLocaleUpperCase("pt-BR");
 async function exportExcel(){
   const m = S.month, rc = receipts(m);
-  if (!rc.length) { toast("Nenhuma baixa neste mês para exportar."); return; }
+  if (!rc.length) { toast("Nenhum pagamento registrado neste mês para exportar."); return; }
   if (typeof XLSX === "undefined") { toast("A biblioteca do Excel não carregou. Verifique a internet e recarregue a página."); return; }
   if (!S.dl) { toast("Exportação indisponível neste navegador."); return; }
   const comp = brDate(lastDayOf(m));
@@ -1622,7 +1622,7 @@ async function exportExcel(){
     return {
       "EMITIR": "SIM",
       "COMPETÊNCIA": comp,
-      "DATA DA BAIXA": brDate(r.pay),
+      "DATA DO PAGAMENTO": brDate(r.pay),
       "VALOR": Number(r.value.toFixed(2)),
       "FORMA DE PAGAMENTO": UP(payLabel(r.pays)),
       "NOME COMPLETO": UP(r.name),
@@ -1641,7 +1641,7 @@ async function exportExcel(){
   ws["!cols"] = [8,13,13,10,14,34,18,30,17,18,52,13,16,12,12,9,15,10].map(w => ({wch:w}));
   ws["!autofilter"] = {ref: XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:rows.length, c:Object.keys(rows[0]).length-1}})};
   const byMeth = {}; rc.forEach(r => r.pays.forEach(p => { const k = METH[p.m] || "—"; byMeth[k] = (byMeth[k]||0) + (Number(p.v)||0); }));
-  const resumo = [["ARENA B12 · RECEBIMENTOS POR DATA DA BAIXA"], ["Mês", UP(monthLabel(m))], ["Competência das notas", comp], [],
+  const resumo = [["ARENA B12 · RECEBIMENTOS POR DATA DO PAGAMENTO"], ["Mês", UP(monthLabel(m))], ["Competência das notas", comp], [],
     ["Total recebido", rc.reduce((s,r)=>s+r.value,0)], ["Avulsos", rc.filter(r=>r.kind==="Avulso").reduce((s,r)=>s+r.value,0)], ["Eventos", rc.filter(r=>r.kind==="Evento").reduce((s,r)=>s+r.value,0)], ["Mensalidades", rc.filter(r=>r.kind==="Mensalidade").reduce((s,r)=>s+r.value,0)],
     ["Recebimentos", rc.length], [], ["Por forma de pagamento"], ...Object.entries(byMeth).map(([k,v]) => [k, v])];
   const ws2 = XLSX.utils.aoa_to_sheet(resumo); ws2["!cols"] = [{wch:28},{wch:22}];
