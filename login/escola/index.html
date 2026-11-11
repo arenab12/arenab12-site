@@ -220,7 +220,7 @@ input[type=date],input[type=month],input[type=text],input[type=tel],input[type=n
     <div class="row">
       <div style="flex:1;min-width:220px">
         <h1>Resumo mensal — repasse</h1>
-        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Calculado sozinho a partir das baixas de mensalidade e dos lançamentos de kit e eventos. Ninguém precisa redigitar nada aqui.</p>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Calculado sozinho a partir dos pagamentos de mensalidade e dos lançamentos de kit e eventos. Ninguém precisa redigitar nada aqui.</p>
       </div>
     </div>
     <div id="resumoTiles" class="stats"></div>
@@ -259,10 +259,10 @@ input[type=date],input[type=month],input[type=text],input[type=tel],input[type=n
     <div class="row">
       <div style="flex:1;min-width:220px">
         <h1>Mensalidades do mês</h1>
-        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Um aluno por linha, gerado sozinho a partir do cadastro. Dê baixa quando o pagamento daquele aluno cair na conta.</p>
+        <p class="muted" style="margin:4px 0 0;max-width:62ch;font-size:13px">Um aluno por linha, gerado sozinho a partir do cadastro. Registre o pagamento quando o dinheiro daquele aluno cair na conta.</p>
       </div>
     </div>
-    <div class="banner info" id="banner-mensalidades" hidden>Visão da Arena: <b>somente leitura</b>. Quem dá baixa é a escola — a Arena confere pelo Resumo.</div>
+    <div class="banner info" id="banner-mensalidades" hidden>Visão da Arena: <b>somente leitura</b>. Quem registra os pagamentos é a escola — a Arena confere pelo Resumo.</div>
     <div class="panel">
       <div class="tblwrap"><table class="list">
         <thead><tr><th>Aluno</th><th class="num">Mensalidade (R$)</th><th>Status</th><th>Pago em</th><th>Forma</th><th></th></tr></thead>
@@ -318,7 +318,7 @@ input[type=date],input[type=month],input[type=text],input[type=tel],input[type=n
 <!-- modal: dar baixa mensalidade -->
 <div class="ov" id="baixaModal" hidden onclick="if(event.target===this) fecharBaixa()">
   <div class="modal">
-    <div class="mh"><h2>Dar baixa — mensalidade</h2><button class="x" onclick="fecharBaixa()" aria-label="Fechar">×</button></div>
+    <div class="mh"><h2>Registrar pagamento — mensalidade</h2><button class="x" onclick="fecharBaixa()" aria-label="Fechar">×</button></div>
     <div class="mb">
       <div class="kv"><dt>Aluno</dt><dd id="baixaAlunoNome"></dd><dt>Mês</dt><dd id="baixaMes"></dd></div>
       <div class="g2">
@@ -327,7 +327,7 @@ input[type=date],input[type=month],input[type=text],input[type=tel],input[type=n
       </div>
       <div class="f"><label>Forma de pagamento</label><select id="baixaForma"><option>Pix</option><option>Dinheiro</option><option>Cartão</option></select></div>
     </div>
-    <div class="mf"><button class="btn pri" onclick="confirmarBaixaModal()">Confirmar baixa</button><button class="btn ghost" onclick="fecharBaixa()">Cancelar</button></div>
+    <div class="mf"><button class="btn pri" onclick="confirmarBaixaModal()">Confirmar pagamento</button><button class="btn ghost" onclick="fecharBaixa()">Cancelar</button></div>
   </div>
 </div>
 
@@ -684,7 +684,7 @@ function renderMensalidades(){
     const nomeTag = a.id==='a1' ? ' <span class="example-tag">(exemplo)</span>' : '';
     const acao = !canEdit ? ''
       : st==='Pago' ? `<button class="btn sm ghost" onclick="desfazerBaixa('${a.id}','${mes}')">Desfazer</button>`
-      : `<button class="btn sm pri" onclick="abrirBaixaModal('${a.id}','${mes}')">Dar baixa</button>`;
+      : `<button class="btn sm pri" onclick="abrirBaixaModal('${a.id}','${mes}')">Registrar pagamento</button>`;
     return `<tr>
       <td>${a.nome}${nomeTag}</td>
       <td class="num">${brl(a.mensalidade)}</td>
@@ -824,7 +824,7 @@ function renderResumo(){
 
   const months = monthsInUse();
   const body = document.getElementById('resumoBody');
-  if(!months.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Nada lançado ainda — comece pela aba Alunos e dê baixa nas Mensalidades.</td></tr>`; return; }
+  if(!months.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Nada lançado ainda — comece pela aba Alunos e registre os pagamentos nas Mensalidades.</td></tr>`; return; }
   body.innerHTML = months.map(mo=>{
     const ro = resumoForMonth(mo);
     const rep = state.repasse[mo] || {status:'Pendente', dataPagamento:''};
