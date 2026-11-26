@@ -534,6 +534,8 @@ button,a,label,summary,.mrow{touch-action:manipulation}
 .qact{display:grid;gap:9px}.qact .btn{display:flex;align-items:center;justify-content:center;min-height:48px;font-size:16px;text-decoration:none;color:var(--fg)}.qact .btn.pri{color:var(--accent-ink)}.qact .btn.danger{color:var(--bad)}
 @media (min-width:1700px){ body{zoom:1.08} }
 @media (min-width:1900px){ body{zoom:1.15} }
+.discbox{display:grid;gap:10px;background:var(--warn-soft);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.discbox .link{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:700;text-align:left;text-decoration:underline;cursor:pointer}
 .teststrip{background:#2A2F3A;color:#C9D3E6;font-size:12.5px}
 .tsin{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-block:6px}
 .tsin b{letter-spacing:.1em;font-size:11px}
@@ -763,7 +765,7 @@ function recDues(upTo){
       if (end && comp > end) break;
       if (!(r.payments && r.payments[comp]) && recOccurrences(r, comp) > 0) {
         const due = `${comp}-${dd}`;
-        out.push({r, comp, due, overdue: due < t, value:Number(r.monthly)||0});
+        out.push({r, comp, due, overdue: due < t, value:monthVal(r, comp)});
       }
       const [y,m] = comp.split("-").map(Number); comp = m === 12 ? `${y+1}-01` : `${y}-${pad(m+1)}`;
     }
@@ -853,6 +855,10 @@ function bindSplit(root, totalSel){
       return Math.abs(sum - tot()) > 0.009 ? `A soma das formas (${brl(sum)}) precisa ser igual ao valor (${brl(tot())}).` : ""; }
   };
 }
+const monthAdj = (r, m) => r && r.monthAdj && r.monthAdj[m] && r.monthAdj[m].value != null ? r.monthAdj[m] : null;
+const baseVal = (r, m) => { const h = (r && r.monthlyHist) || []; let v = null; for (const x of [...h].sort((a,b) => a.from.localeCompare(b.from))) if (x.from <= m) v = Number(x.value)||0; return v != null ? v : Number(r.monthly)||0; };
+const monthVal = (r, m) => { const a = monthAdj(r, m); return a ? Number(a.value)||0 : baseVal(r, m); };
+const discTxt = (x, base) => { const d = (Number(base)||0) - (Number(x.value)||0); return d > 0 ? ` · desconto de ${brl(d)}${x.why ? ` (${esc(x.why)})` : ""}` : ""; };
 const methodOf = pays => pays.length > 1 ? "misto" : (pays[0] || {}).m || "pix";
 
 /* ---------- Render ---------- */
@@ -1252,9 +1258,9 @@ function vFinanceiro(){
   const mRows = monthRecs.map(r => { const p = r.payments && r.payments[m];
     const st = p ? `<span class="pill ok">Pago ${short(p.at||m+"-01")} · ${esc(payLabel(paysOf(p, p.value ?? r.monthly)))}</span>` : mDue < today() ? `<span class="pill bad">Vencida ${short(mDue)}</span>` : `<span class="pill warn">Vence ${short(mDue)}</span>`;
     return `<tr><td><b>${esc(r.clientName)}</b>${r.exemplo?' <span class="pill ex">exemplo</span>':""}<div class="muted" style="font-size:12px">${WDs[r.weekday]} ${tm(minOf(r))} · ${esc(courtLabel(r.court))} · ${recOccurrences(r, m)} jogos</div></td>
-      <td>${st}</td><td class="num">${brl(p ? (p.value ?? r.monthly) : r.monthly)}</td>
+      <td>${st}${!p && monthAdj(r, m) ? `<div class="muted" style="font-size:12px">valor ajustado neste mês${discTxt(monthAdj(r, m), baseVal(r, m))}</div>` : ""}</td><td class="num">${brl(p ? (p.value ?? r.monthly) : monthVal(r, m))}</td>
       <td class="num"><button class="btn sm${p?" ghost":""}" data-payrec="${esc(r.id)}|${m}">${p ? "Ver pagamento" : "Registrar pagamento"}</button></td></tr>`; }).join("");
-  const mGot = monthRecs.reduce((t,r) => t + (r.payments && r.payments[m] ? Number(r.payments[m].value ?? r.monthly)||0 : 0), 0), mAll = monthRecs.reduce((t,r) => t + (Number(r.monthly)||0), 0);
+  const mGot = monthRecs.reduce((t,r) => t + (r.payments && r.payments[m] ? Number(r.payments[m].value ?? r.monthly)||0 : 0), 0), mAll = monthRecs.reduce((t,r) => t + (r.payments && r.payments[m] ? Number(r.payments[m].value ?? r.monthly)||0 : monthVal(r, m)), 0);
   const soonRows = soonRec.map(x => `<tr><td><span class="pill acc">Mensalidade</span></td><td>${esc(monthLabel(x.comp))}<div class="muted" style="font-size:12px">vence ${brDate(x.due)}</div></td><td><b>${esc(x.r.clientName)}</b></td><td class="num">${brl(x.value)}</td><td class="num"><button class="btn sm ghost" data-payrec="${esc(x.r.id)}|${x.comp}">Registrar pagamento</button></td></tr>`).join("");
   return `
   <section class="row"><h1>Financeiro</h1><span class="spacer"></span><input type="month" id="mpick" value="${m}" aria-label="Mês">
@@ -1548,23 +1554,25 @@ function recModal(r, date, comp, pre = {}){
   if (isCaixa()) return openModal(`
     <div class="mh"><h2>Mensalista</h2><span class="spacer"></span><button class="btn sm ghost" data-close aria-label="Fechar">✕</button></div>
     <div class="mb"><h1 style="font-size:19px">${esc(r.clientName)}</h1>
-      <dl class="kv"><dt>Horário fixo</dt><dd>${WD[r.weekday]} · ${tm(minOf(r))}</dd><dt>Quadra</dt><dd>${esc(courtLabel(r.court))}</dd><dt>Mensalidade</dt><dd>${brl(r.monthly)}</dd>
-      <dt>${esc(monthLabel(m))}</dt><dd>${paid ? '<span class="pill ok">Pago</span>' : '<span class="pill warn">Em aberto</span>'}</dd></dl></div>
+      <dl class="kv"><dt>Horário fixo</dt><dd>${WD[r.weekday]} · ${tm(minOf(r))}</dd><dt>Quadra</dt><dd>${esc(courtLabel(r.court))}</dd><dt>Mensalidade</dt><dd>${brl(baseVal(r, m))}</dd>
+      <dt>${esc(monthLabel(m))}</dt><dd>${paid ? '<span class="pill ok">Pago</span>' : `<span class="pill warn">Em aberto · ${brl(monthVal(r, m))}</span>${monthAdj(r, m) ? `<div class="muted" style="font-size:12.5px;font-weight:400">${discTxt(monthAdj(r, m), baseVal(r, m)).replace(/^ · /, "")}</div>` : ""}`}</dd></dl></div>
     <div class="mf"><span class="spacer"></span>${paid ? "" : `<button class="btn pri" id="rNote">Anotar pagamento</button>`}</div>`, root => {
-      $("#rNote",root)?.addEventListener("click", () => noteModal({ref:`rec:${r.id}:${m}`, value:r.monthly}));
+      $("#rNote",root)?.addEventListener("click", () => noteModal({ref:`rec:${r.id}:${m}`, value:monthVal(r, m)}));
     });
   openModal(`
     <div class="mh"><h2>Mensalista</h2><span class="spacer"></span>${r.exemplo?'<span class="pill ex">exemplo</span>':""}<button class="btn sm ghost" data-close aria-label="Fechar">✕</button></div>
     <div class="mb">
       <h1 style="font-size:19px">${esc(r.clientName)}</h1>
       <dl class="kv"><dt>Horário fixo</dt><dd>${WD[r.weekday]} · ${tm(minOf(r))}</dd><dt>Quadra</dt><dd>${esc(courtLabel(r.court))}</dd>
-      <dt>WhatsApp</dt><dd>${esc(fmtPhone(r.phone)) || "—"}</dd><dt>CPF</dt><dd>${r.cpf ? esc(fmtCpf(r.cpf)) : '<span style="color:var(--warn)">não informado</span>'}</dd><dt>Mensalidade</dt><dd>${brl(r.monthly)}</dd>
-      <dt>${esc(monthLabel(m))}</dt><dd>${paid ? `<span class="pill ok">Pago em ${brDate(paid.at||m+"-01")} · ${esc(payLabel(paysOf(paid, paid.value ?? r.monthly)))} · ${brl(paid.value ?? r.monthly)}</span>` : '<span class="pill warn">Em aberto</span>'}</dd>
+      <dt>WhatsApp</dt><dd>${esc(fmtPhone(r.phone)) || "—"}</dd><dt>CPF</dt><dd>${r.cpf ? esc(fmtCpf(r.cpf)) : '<span style="color:var(--warn)">não informado</span>'}</dd><dt>Mensalidade</dt><dd>${brl(baseVal(r, m))}</dd>
+      <dt>${esc(monthLabel(m))}</dt><dd>${paid ? `<span class="pill ok">Pago em ${brDate(paid.at||m+"-01")} · ${esc(payLabel(paysOf(paid, paid.value ?? r.monthly)))} · ${brl(paid.value ?? r.monthly)}</span>${discTxt(paid, paid.base ?? r.monthly) ? `<div class="muted" style="font-size:12.5px;font-weight:400">${discTxt(paid, paid.base ?? r.monthly).replace(/^ · /, "")} só neste mês</div>` : ""}` : `<span class="pill warn">Em aberto</span>`}</dd>
       ${r.notes ? `<dt>Obs.</dt><dd style="font-weight:400">${esc(r.notes)}</dd>` : ""}</dl>
       ${!paid ? `${pre.note ? `<div class="sitenote">Anotação do caixa: ${esc(pre.note)}</div>` : ""}<span class="lbl">Registrar pagamento da mensalidade de ${esc(monthLabel(m))}</span>
-        <div class="g2"><label class="f"><span class="lbl">Valor recebido (R$)</span><input type="number" id="rVal" value="${Number(pre.value ?? r.monthly)||0}" min="0" step="10"></label>
+        <div class="g2"><label class="f"><span class="lbl">Valor deste mês (R$)</span><input type="number" id="rVal" value="${Number(pre.value ?? monthVal(r, m))||0}" min="0" step="10"></label>
         <label class="f"><span class="lbl">Data do pagamento</span><input type="date" id="rDay" value="${pre.day || today()}"></label></div>
-        <div class="f"><span class="lbl">Forma de pagamento</span>${splitHTML(pre.pays && pre.pays.length ? pre.pays : [{m:"pix", v:Number(pre.value ?? r.monthly)||0}])}</div>` : ""}
+        <div class="f"><span class="lbl">Forma de pagamento</span>${splitHTML(pre.pays && pre.pays.length ? pre.pays : [{m:"pix", v:Number(pre.value ?? monthVal(r, m))||0}])}</div>
+        <div class="discbox" id="rDiscBox" hidden><span id="rDisc"></span><label class="f"><span class="lbl">Motivo (opcional)</span><input type="text" id="rWhy" value="${esc((monthAdj(r, m) || {}).why || "")}" placeholder="Ex.: última semana do ano sem jogo"></label>
+          <button type="button" class="link" id="rAdj" style="justify-self:start">Só ajustar o valor de ${esc(monthLabel(m))}, sem registrar pagamento</button></div>` : ""}
     </div>
     <div class="mf">
       ${date ? `<button class="btn" id="rSkip">Liberar só ${short(date)}</button>` : ""}
@@ -1572,8 +1580,15 @@ function recModal(r, date, comp, pre = {}){
       ${paid ? `<button class="btn ghost danger" id="rUnpay">Desfazer pagamento</button>` : `<button class="btn pri" id="rPay">Registrar pagamento</button>`}
     </div>`, root => {
     const sp = $("#split", root) ? bindSplit(root, "#rVal") : null;
-    const docSet = payments => { const base = {...r}; delete base.id; base.payments = payments; return S.db.doc("recurring/"+r.id).set(base); };
-    $("#rPay",root)?.addEventListener("click", async () => { const spErr = sp.check(); if (spErr) { toast(spErr); return; } const pays = sp.read(); const p = {...(r.payments||{}), [m]:{method:methodOf(pays), pays, at:$("#rDay",root).value || today(), regAt:new Date().toISOString(), value:Number($("#rVal",root).value)||0}}; if (await write(async () => { await docSet(p); if (pre.noteId) await resolveNote(pre.noteId, "baixa"); }, "Pagamento registrado.")) closeModal(); });
+    const docSet = (payments, adj) => { const base = {...r}; delete base.id; base.payments = payments; if (adj !== undefined) base.monthAdj = adj; return S.db.doc("recurring/"+r.id).set(base); };
+    const discUpd = () => { const v = $("#rVal",root), box = $("#rDiscBox",root); if (!v || !box) return; const val = Number(v.value)||0, base = baseVal(r, m), d = base - val;
+      box.hidden = val === base && !monthAdj(r, m);
+      $("#rDisc",root).innerHTML = d > 0 ? `<b>Desconto de ${brl(d)}</b> só em ${esc(monthLabel(m))}. A mensalidade fixa continua ${brl(base)}.` : d < 0 ? `Valor ${brl(-d)} acima da mensalidade fixa (${brl(base)}), só em ${esc(monthLabel(m))}.` : `Valor igual à mensalidade fixa (${brl(base)}).`; };
+    $("#rVal",root)?.addEventListener("input", discUpd); discUpd();
+    $("#rAdj",root)?.addEventListener("click", async () => { const val = Number($("#rVal",root).value)||0, adj = {...(r.monthAdj||{})};
+      if (val === baseVal(r, m)) delete adj[m]; else adj[m] = {value:val, why:$("#rWhy",root).value.trim(), at:new Date().toISOString()};
+      if (await write(() => docSet({...(r.payments||{})}, adj), val === baseVal(r, m) ? `Valor de ${monthLabel(m)} voltou para a mensalidade fixa.` : `Valor de ${monthLabel(m)} ajustado para ${brl(val)}.`)) closeModal(); });
+    $("#rPay",root)?.addEventListener("click", async () => { const spErr = sp.check(); if (spErr) { toast(spErr); return; } const pays = sp.read(); const p = {...(r.payments||{}), [m]:{method:methodOf(pays), pays, at:$("#rDay",root).value || today(), regAt:new Date().toISOString(), value:Number($("#rVal",root).value)||0, base:baseVal(r, m), ...($("#rWhy",root) && $("#rWhy",root).value.trim() ? {why:$("#rWhy",root).value.trim()} : {})}}; if (await write(async () => { await docSet(p); if (pre.noteId) await resolveNote(pre.noteId, "baixa"); }, "Pagamento registrado.")) closeModal(); });
     $("#rUnpay",root)?.addEventListener("click", async () => { if (!await ask({title:"Desfazer o pagamento desta mensalidade?", text:`Mensalidade de <b>${esc(monthLabel(m))}</b> de ${esc(r.clientName)}. O valor sai do Financeiro e volta para a lista a receber.`, ok:"Desfazer pagamento"})) return; const p = {...(r.payments||{})}; delete p[m]; if (await write(() => docSet(p), "Pagamento desfeito.")) closeModal(); });
     $("#rSkip",root)?.addEventListener("click", async () => { if (!await ask({title:`Liberar o horário de ${short(date)}?`, text:`${esc(r.clientName)} não joga neste dia e o horário fica livre para outra reserva. Os outros dias do mensalista continuam iguais.`, ok:"Liberar horário", danger:false})) return; if (await write(() => S.db.doc("skips/" + r.id + "__" + date).set({recId:r.id, date}), `Horário de ${short(date)} liberado.`)) closeModal(); });
     $("#rEdit",root).addEventListener("click", () => recEditModal(r));
@@ -1596,11 +1611,15 @@ function recEditModal(r){
       <label class="f"><span class="lbl">Horário</span><select id="rMin">${slotOpts(r.court, minOf(r))}</select></label></div>
       <div class="g2"><label class="f"><span class="lbl">Mensalidade (R$)</span><input type="number" id="rMonthly" min="0" step="10" value="${Number(r.monthly)||0}"></label>
       <label class="f"><span class="lbl">Início</span><input type="date" id="rStart" value="${r.startDate||today()}"></label></div>
+      ${isNew ? "" : `<div class="discbox" id="rFromBox" hidden><span id="rFromTxt"></span><label class="f"><span class="lbl">Novo valor vale a partir de</span><input type="month" id="rFrom" value="${monthOf(today())}"></label><span class="muted" style="font-size:12.5px">Os meses anteriores continuam com o valor antigo.</span></div>`}
       ${isNew ? `<p class="muted" style="margin:0;font-size:12.5px" id="rHint"></p>` : ""}
       <label class="f"><span class="lbl">Observações</span><textarea id="rNotes">${esc(r.notes)}</textarea></label>
       <p class="err" id="rErr" hidden></p>
     </form>
     <div class="mf">${!isNew && r.active!==false ? `<button class="btn danger" id="rEnd">Encerrar mensalidade</button>` : ""}<span class="spacer"></span><button class="btn ghost" data-close>Fechar</button><button class="btn pri" id="rSave">Salvar</button></div>${clientDatalist()}`, root => {
+    const fromUpd = () => { const box = $("#rFromBox",root); if (!box) return; const nv = Number($("#rMonthly",root).value)||0, ov = Number(r.monthly)||0; box.hidden = nv === ov;
+      $("#rFromTxt",root).innerHTML = `Mensalidade passa de <b>${brl(ov)}</b> para <b>${brl(nv)}</b>.`; };
+    $("#rMonthly",root)?.addEventListener("input", fromUpd);
     const sug = () => { if (!isNew) return; const c = $("#rCourt",root).value, mm = Number($("#rMin",root).value), wd = Number($("#rWd",root).value); const dt = nextWeekday(wd), p = monthlyOf(c, dt, mm); $("#rMonthly",root).value = p; $("#rHint",root).textContent = monthlyFromTable(c, dt, mm) ? `Valor padrão da tabela de preços: ${brl(p)} por mês. Pode ajustar para este cliente.` : `Sem valor mensal na tabela para esse horário. Sugestão: 4 × avulso = ${brl(p)}.`; };
     $("#rCourt",root).addEventListener("change", () => { $("#rMin",root).innerHTML = slotOpts($("#rCourt",root).value, Number($("#rMin",root).value)); sug(); });
     $("#rMin",root).addEventListener("change", sug); $("#rWd",root).addEventListener("change", sug); sug();
@@ -1615,6 +1634,10 @@ function recEditModal(r){
       const clash = S.recurring.find(x => x.id !== r.id && x.active!==false && Number(x.weekday)===wd && minOf(x)===min && x.court===courtId);
       if (clash) return fail(`${courtName(courtId)} já tem mensalista (${clash.clientName}) nesse horário.`);
       const data = {clientName:name, phone:$("#rPhone",root).value.trim(), cpf, email:$("#rEmail",root).value.trim(), weekday:wd, min, hour:Math.floor(min/60), court:courtId, monthly:Number($("#rMonthly",root).value)||0, startDate:$("#rStart",root).value||today(), notes:$("#rNotes",root).value.trim()};
+      if (!isNew && data.monthly !== (Number(r.monthly)||0)) { const from = ($("#rFrom",root) || {}).value || monthOf(today());
+        const hist = (r.monthlyHist && r.monthlyHist.length ? r.monthlyHist : [{from:"0000-00", value:Number(r.monthly)||0}]).filter(x => x.from < from);
+        hist.push({from, value:data.monthly}); data.monthlyHist = hist;
+        if (from > monthOf(today())) data.monthly = Number(r.monthly)||0; }
       const nd = await nameDecision(name, cpf, data.phone); if (nd.keep) data.clientName = nd.ex.name;
       const ok = await write(async () => { data.clientId = await upsertClient({name:data.clientName, cpf, phone:data.phone, email:data.email}, {keepName:nd.keep}); await (isNew ? S.db.collection("recurring").add({...data, endDate:null, active:true, payments:{}, createdAt:new Date().toISOString()}) : S.db.doc("recurring/"+r.id).update(data)); }, isNew ? "Mensalista cadastrado." : "Mensalista atualizado.");
       if (ok) closeModal();
@@ -1746,7 +1769,7 @@ function noteTargets(){
   activeBk().filter(b => !b.paid && b.kind !== "bloqueio" && b.date >= from && b.date <= addDays(today(), 1)).sort((a,b) => b.date.localeCompare(a.date) || minOf(b) - minOf(a))
     .forEach(b => list.push({ref:`bk:${b.id}`, label:`${short(b.date)} ${tm(minOf(b))} · ${courtName(b.court)} · ${b.clientName} · ${brl(b.price)}`, value:b.price}));
   const m = monthOf(today());
-  S.recurring.filter(r => r.active !== false && !(r.payments && r.payments[m])).forEach(r => list.push({ref:`rec:${r.id}:${m}`, label:`Mensalidade ${monthLabel(m)} · ${r.clientName} · ${brl(r.monthly)}`, value:r.monthly}));
+  S.recurring.filter(r => r.active !== false && !(r.payments && r.payments[m])).forEach(r => list.push({ref:`rec:${r.id}:${m}`, label:`Mensalidade ${monthLabel(m)} · ${r.clientName} · ${brl(monthVal(r, m))}`, value:monthVal(r, m)}));
   return list;
 }
 function refLabelOf(ref){
@@ -2071,7 +2094,7 @@ function bindView(){
   app.querySelectorAll("[data-nbx]").forEach(b => b.addEventListener("click", () => { const n = S.notes.find(x => x.id === b.dataset.nbx); const bk = S.bookings.find(x => x.id === String(n.ref).split(":")[1]);
     if (bk) payBkModal(bk, {value:n.value || bk.price, pays:n.pays, note:n.text, noteId:n.id, day:String(n.createdAt).slice(0,10)}); }));
   app.querySelectorAll("[data-nrx]").forEach(b => b.addEventListener("click", () => { const n = S.notes.find(x => x.id === b.dataset.nrx); const [, id, comp] = String(n.ref).split(":"); const r = S.recurring.find(x => x.id === id);
-    if (r) recModal(r, null, comp, {value:n.value || r.monthly, pays:n.pays, note:n.text, noteId:n.id, day:String(n.createdAt).slice(0,10)}); }));
+    if (r) recModal(r, null, comp, {value:n.value || monthVal(r, comp), pays:n.pays, note:n.text, noteId:n.id, day:String(n.createdAt).slice(0,10)}); }));
   on("#xlsEv","click", exportEventos);
   app.querySelectorAll("[data-exk]").forEach(b => b.addEventListener("click", () => { S.ext.k = b.dataset.exk; render(); }));
   on("#exDays","change", e => { S.ext.days = Number(e.target.value); render(); });
