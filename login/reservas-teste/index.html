@@ -2236,7 +2236,7 @@ async function enviarConfirmacao(b, forcar){
     if (error) { let m = error.message; try { const j = await error.context.json(); if (j && j.erro) m = j.erro; } catch(_){} throw new Error(m); }
     if (data && data.ok === false) throw new Error(data.erro || "falha no envio");
     b.mail = "ok";
-  } catch(e) { b.mail = "erro"; b.mailErr = /Failed to send a request|not found|404/i.test(e.message) ? "O envio de e-mail ainda não está ligado no Supabase." : e.message; }
+  } catch(e) { b.mail = "erro"; b.mailErr = /Failed to send a request|Failed to fetch/i.test(e.message) ? "Não consegui falar com a função confirmar-reserva (confira se o \"Verify JWT\" está desligado). Detalhe: " + e.message : /not found|404/i.test(e.message) ? "Função confirmar-reserva não encontrada no Supabase. Detalhe: " + e.message : e.message; console.warn("confirmar-reserva", e); }
   if (S.cv.current && S.cv.current.id === b.id) render();
 }
 /* link "Cancelar reserva" do e-mail: ?cancelar=ID&t=TOKEN */
