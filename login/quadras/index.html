@@ -1228,8 +1228,15 @@ function vFinanceiro(){
   const av = rc.filter(r => r.kind !== "Mensalidade"), me = rc.filter(r => r.kind === "Mensalidade");
   const older = rc.filter(r => monthOf(r.ref) < m);
   const noCpf = rc.filter(r => !docOk(r.cpf));
-  const pendBk = activeBk().filter(b => !b.paid && b.kind !== "bloqueio" && b.date <= lastDayOf(m));
-  const dues = recDues(m), pendRec = dues.filter(x => x.overdue), soonRec = dues.filter(x => !x.overdue && x.comp === m);
+  const pendBk = activeBk().filter(b => !b.paid && b.kind !== "bloqueio" && b.date <= today());
+  const dues = recDues(monthOf(today())), pendRec = dues.filter(x => x.overdue), soonRec = dues.filter(x => !x.overdue);
+  const monthBk = activeBk().filter(b => monthOf(b.date) === m && b.kind !== "bloqueio").sort((a,b) => a.date.localeCompare(b.date) || minOf(a) - minOf(b));
+  const bkGot = monthBk.filter(b => b.paid).reduce((t,b) => t + (Number(b.price)||0), 0), bkAll = monthBk.reduce((t,b) => t + (Number(b.price)||0), 0);
+  const bkRows = monthBk.map(b => { const fut = b.date > today();
+    const st = b.paid ? `<span class="pill ok">Pago${b.paidAt ? " " + short(String(b.paidAt).slice(0,10)) : ""} · ${esc(payLabel(paysOf(b, b.price)))}</span>` : fut ? `<span class="pill ex">Agendado</span>` : `<span class="pill warn">A receber</span>`;
+    return `<tr><td><b>${esc(b.clientName || "—")}</b> ${b.kind === "evento" ? `<span class="pill evt">${esc(b.eventType || "evento")}</span>` : ""}${b.origem === "site" ? ' <span class="pill acc">site</span>' : ""}<div class="muted" style="font-size:12px">${WDs[parse(b.date).getDay()]} ${short(b.date)} · ${tm(minOf(b))} · ${esc(courtLabel(b.court))}</div></td>
+      <td>${st}</td><td class="num">${brl(b.price)}</td>
+      <td class="num">${b.paid || fut ? `<button class="btn sm ghost" data-bk="${esc(b.id)}">Ver</button>` : `<button class="btn sm" data-paybk="${esc(b.id)}">Registrar pagamento</button>`}</td></tr>`; }).join("");
   const byMeth = {pix:0, cartao:0, dinheiro:0}; rc.forEach(r => r.pays.forEach(p => byMeth[p.m] = (byMeth[p.m]||0) + (Number(p.v)||0)));
   const totMeth = Object.values(byMeth).reduce((a,b) => a+b, 0);
   const byCourt = [...S.cfg.courts, ...Object.keys(SPACES).map(k => court(k))].map(c => ({c, v: sum(rc.filter(r => r.court === c.id))})).filter(x => S.cfg.courts.includes(x.c) || x.v); const maxCourt = Math.max(1, ...byCourt.map(x => x.v));
@@ -1246,9 +1253,9 @@ function vFinanceiro(){
     <td>${esc(r.refLabel)}${monthOf(r.ref) < m ? ' <span class="pill warn">mês anterior</span>' : ""}<div class="muted" style="font-size:12px">${esc(courtLabel(r.court))}</div></td>
     <td>${esc(payLabel(r.pays))}</td><td class="num">${brl(r.value)}</td></tr>`).join("");
   const pendItems = [
-    ...pendBk.map(b => ({sort:b.date + tm(minOf(b)), html:`<tr><td><span class="pill ${b.kind==="evento"?"evt":"ex"}">${b.kind==="evento"?"Evento":"Avulso"}</span></td><td>${b.kind==="evento"?"Evento":"Jogo"} ${short(b.date)} · ${tm(minOf(b))}</td><td><b>${esc(b.clientName)}</b><div class="muted" style="font-size:12px">${esc(courtLabel(b.court))}</div></td>
+    ...pendBk.map(b => ({sort:b.date + tm(minOf(b)), html:`<tr><td><span class="pill ${b.kind==="evento"?"evt":"ex"}">${b.kind==="evento"?"Evento":"Avulso"}</span></td><td>${b.kind==="evento"?"Evento":"Jogo"} ${short(b.date)}/${b.date.slice(2,4)} · ${tm(minOf(b))}</td><td><b>${esc(b.clientName)}</b><div class="muted" style="font-size:12px">${esc(courtLabel(b.court))}</div></td>
       <td class="num">${brl(b.price)}</td><td class="num"><button class="btn sm" data-paybk="${esc(b.id)}">Registrar pagamento</button></td></tr>`})),
-    ...pendRec.map(x => ({sort:x.due, html:`<tr><td><span class="pill acc">Mensalidade</span></td><td>${esc(monthLabel(x.comp))}<div style="font-size:12px;color:var(--bad)">venceu ${brDate(x.due)}</div></td><td><b>${esc(x.r.clientName)}</b><div class="muted" style="font-size:12px">${WDs[x.r.weekday]} ${tm(minOf(x.r))} · ${esc(courtLabel(x.r.court))}</div></td>
+    ...pendRec.map(x => ({sort:x.due, html:`<tr><td><span class="pill acc">Mensalidade</span></td><td>Mensalidade de ${esc(monthLabel(x.comp))}<div style="font-size:12px;color:var(--bad)">venceu ${brDate(x.due)}</div></td><td><b>${esc(x.r.clientName)}</b><div class="muted" style="font-size:12px">${WDs[x.r.weekday]} ${tm(minOf(x.r))} · ${esc(courtLabel(x.r.court))}</div></td>
       <td class="num">${brl(x.value)}</td><td class="num"><button class="btn sm" data-payrec="${esc(x.r.id)}|${x.comp}">Registrar pagamento</button></td></tr>`}))
   ].sort((a,b) => a.sort.localeCompare(b.sort));
   const pendRows = pendItems.map(x => x.html).join("");
@@ -1269,10 +1276,13 @@ function vFinanceiro(){
   <section class="stats">
     <div class="panel stat"><span class="lbl">Recebido em ${esc(monthLabel(m))}</span><span class="v">${brl(sum(rc))}</span><span class="s">${rc.length} recebimentos · avulsos e eventos ${brl(sum(av))} · mensalidades ${brl(sum(me))}</span></div>
     <div class="panel stat"><span class="lbl">De meses anteriores</span><span class="v">${brl(sum(older))}</span><span class="s">${older.length} jogos ou mensalidades antigos pagos neste mês</span></div>
-    <div class="panel stat"><span class="lbl">Ainda a receber</span><span class="v" style="color:var(--warn)">${brl(sum(pendBk.map(b => ({value:b.price}))) + sum(pendRec))}</span><span class="s">${pendBk.length} reservas + ${pendRec.length} mensalidades vencidas${soonRec.length ? ` · ${soonRec.length} a vencer dia ${S.cfg.dueDay} (${brl(sum(soonRec))})` : ""}</span></div>
+    <div class="panel stat"><span class="lbl">Ainda a receber (todos os meses)</span><span class="v" style="color:var(--warn)">${brl(sum(pendBk.map(b => ({value:b.price}))) + sum(pendRec))}</span><span class="s">${pendBk.length} jogos e eventos + ${pendRec.length} mensalidades vencidas${soonRec.length ? ` · ${soonRec.length} mensalidades a vencer dia ${S.cfg.dueDay} (${brl(sum(soonRec))})` : ""}</span></div>
   </section>
-  <div class="panel tblwrap"><div class="ph"><h2>A receber</h2><span class="pill warn">${pendItems.length}</span><span class="muted" style="font-size:12.5px">jogos avulsos sem pagamento registrado e mensalidades vencidas (sem pagamento registrado até o dia ${S.cfg.dueDay})</span></div>
+  <div class="panel tblwrap"><div class="ph"><h2>A receber · todos os meses</h2><span class="pill warn">${pendItems.length}</span><span class="spacer"></span><b style="color:var(--warn)">${brl(sum(pendBk.map(b => ({value:b.price}))) + sum(pendRec))}</b></div>
+    <p class="muted" style="margin:0;padding:0 18px 10px;font-size:12.5px">Tudo o que já foi jogado ou venceu e ainda não teve pagamento, de qualquer mês. Não muda com o mês escolhido acima.</p>
     ${pendItems.length ? `<table class="list"><tbody>${pendRows}</tbody></table>` : '<div class="empty">Nada pendente.</div>'}</div>
+  <div class="panel tblwrap"><div class="ph"><h2>Avulsos e eventos de ${esc(monthLabel(m))}</h2><span class="pill ex">${monthBk.length}</span><span class="spacer"></span><span class="muted" style="font-size:12.5px">${brl(bkGot)} de ${brl(bkAll)} recebidos · pela data do jogo</span></div>
+    ${monthBk.length ? `<div class="mb" style="padding-bottom:0"><div class="bar"><i style="width:${bkAll?Math.round(bkGot/bkAll*100):0}%"></i></div></div><table class="list"><tbody>${bkRows}</tbody></table>` : '<div class="empty">Nenhum jogo avulso ou evento neste mês.</div>'}</div>
   <div class="panel tblwrap"><div class="ph"><h2>Mensalidades de ${esc(monthLabel(m))}</h2><span class="pill ex">${monthRecs.length}</span><span class="spacer"></span><span class="muted" style="font-size:12.5px">${brl(mGot)} de ${brl(mAll)} · vencimento dia ${S.cfg.dueDay}</span></div>
     ${monthRecs.length ? `<div class="mb" style="padding-bottom:0"><div class="bar"><i style="width:${mAll?Math.round(mGot/mAll*100):0}%"></i></div></div><table class="list"><tbody>${mRows}</tbody></table>` : '<div class="empty">Nenhum mensalista com jogos neste mês. Cadastre na aba Mensalistas.</div>'}</div>
   <div class="panel tblwrap"><div class="ph"><h2>Recebido no mês</h2><span class="pill ex">${rc.length}</span><span class="spacer"></span><span class="muted" style="font-size:12.5px">Clique numa linha para completar CPF ou e-mail</span></div>
@@ -1285,8 +1295,7 @@ function vFinanceiro(){
     <div class="panel"><div class="ph"><h2>Por quadra e espaço</h2></div><div class="mb">
       ${byCourt.map(x => `<div class="f"><div class="row"><span>${esc(courtLabel(x.c.id))}</span><span class="spacer"></span><b>${brl(x.v)}</b></div><div class="bar"><i style="width:${x.v/maxCourt*100}%"></i></div></div>`).join("")}
     </div></div>
-  </div>
-  ${evSection(m)}`;
+  </div>`;
 }
 
 /* ---------- Ajustes ---------- */
