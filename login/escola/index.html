@@ -78,8 +78,8 @@ nav.tabs button[aria-current="true"] .count{background:rgba(255,255,255,.18);col
 .datenav input[type=month]{width:160px}
 .monthscope{font-size:11.5px;color:var(--muted)}
 
-main{padding-block:20px 48px;display:grid;gap:20px}
-main > section{display:grid;gap:20px;align-content:start}
+main{padding-block:20px 48px;display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+main > section{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-content:start}
 main > section > *{margin:0}
 
 /* banner */
@@ -177,7 +177,7 @@ input[type=date],input[type=month],input[type=text],input[type=tel],input[type=n
 .recibo .assinatura{margin-top:16px;border-top:1px solid var(--line);padding-top:8px;font-size:11.5px;color:var(--muted);text-align:center}
 
 /* tela estreita: abas descem para uma 2ª linha (sem rolagem lateral) e quebram de linha se precisar */
-@media (max-width:1000px){ nav.tabs{order:3;flex:1 1 100%} .mode,.seg{margin-left:auto} header.top .topin{row-gap:6px} }
+@media (max-width:1100px){ nav.tabs{order:3;flex:1 1 100%} .mode,.seg{margin-left:auto} header.top .topin{row-gap:6px} }
 @media (max-width:560px){ .brand small{display:none} .datenav .day,.monthscope{display:none} .datenav input[type=month]{flex:1;width:auto} }
 
 @media print{
