@@ -2232,7 +2232,7 @@ async function start(){
 /* ---------- E-mail de confirmação real (Supabase Edge Function + Resend) ---------- */
 async function enviarConfirmacao(b, forcar){
   try {
-    const { data, error } = await supa.functions.invoke("confirmar-reserva", {body:{id:b.id, forcar:!!forcar}});
+    const { data, error } = await supa.functions.invoke("dynamic-function", {body:{id:b.id, forcar:!!forcar}});
     if (error) { let m = error.message; try { const j = await error.context.json(); if (j && j.erro) m = j.erro; } catch(_){} throw new Error(m); }
     if (data && data.ok === false) throw new Error(data.erro || "falha no envio");
     b.mail = "ok";
